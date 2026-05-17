@@ -55,7 +55,7 @@ export function buildDeliveryReceipt(pedido: Pedido): string {
     v.toLocaleString('pt-BR', { minimumFractionDigits: 2 })
 
   const lines: string[] = [
-    center('Lanchonete Luizão'),
+    center('Luizão Lanches'),
     pad(`Pedido #${pedido.id}`, time),
     SEP,
   ]
