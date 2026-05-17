@@ -3,6 +3,7 @@ import { usePedidosStore } from '@/store/usePedidosStore'
 import { fetchPedidosDoDia } from '@/services/api/pedidos.service'
 import { supabase } from '@/services/supabaseClient'
 import { Pedido } from '@/types'
+import { playNewOrderSound } from '@/utils/notificationSound'
 
 export function usePedidos() {
   const { pedidos, setPedidos, addPedido, updatePedido } = usePedidosStore()
@@ -28,7 +29,10 @@ export function usePedidos() {
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'pedidos' },
-        (payload) => addPedido(payload.new as Pedido)
+        (payload) => {
+          addPedido(payload.new as Pedido)
+          playNewOrderSound()
+        }
       )
       .on(
         'postgres_changes',

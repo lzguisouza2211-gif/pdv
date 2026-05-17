@@ -25,9 +25,9 @@ interface Props {
 }
 
 export function OrderMonitor({ pedidos, onUpdate }: Props) {
-  async function handleAvancar(id: string, status: PedidoStatus) {
+  async function handleAvancar(pedido: Pedido) {
     try {
-      await avancarStatus(id, status)
+      await avancarStatus(pedido)
       onUpdate()
     } catch (err) {
       console.error(err)
@@ -77,7 +77,7 @@ export function OrderMonitor({ pedidos, onUpdate }: Props) {
 
         <div className="flex gap-2 flex-wrap">
           {nextLabel && (
-            <Button size="sm" onClick={() => handleAvancar(p.id, p.status)}>
+            <Button size="sm" onClick={() => handleAvancar(p)}>
               {nextLabel}
             </Button>
           )}

@@ -33,9 +33,9 @@ export function Login() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-muted/50">
-      <Card className="w-full max-w-sm">
+      <Card className="w-full max-w-sm mx-4">
         <CardHeader>
-          <CardTitle className="text-xl text-center">Lanchonete Luizão</CardTitle>
+          <CardTitle className="text-xl text-center">Luizão Lanches</CardTitle>
           <p className="text-sm text-center text-muted-foreground">Área administrativa</p>
         </CardHeader>
         <CardContent>

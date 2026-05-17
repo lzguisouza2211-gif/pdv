@@ -38,19 +38,17 @@ export function GestaoCardapio() {
         <CardHeader>
           <CardTitle>Taxa de Entrega</CardTitle>
         </CardHeader>
-        <CardContent className="flex items-center gap-4">
-          <p className="text-muted-foreground">Atual: <span className="font-semibold">{formatBRL(taxaEntrega)}</span></p>
-          <div className="flex gap-2">
-            <div>
-              <Label htmlFor="taxa" className="sr-only">Nova taxa</Label>
-              <Input
-                id="taxa"
-                placeholder="Ex: 7.50"
-                value={taxaEdit}
-                onChange={(e) => setTaxaEdit(e.target.value)}
-                className="w-32"
-              />
-            </div>
+        <CardContent className="flex flex-col sm:flex-row sm:items-center gap-3">
+          <p className="text-muted-foreground shrink-0">Atual: <span className="font-semibold">{formatBRL(taxaEntrega)}</span></p>
+          <div className="flex gap-2 flex-1">
+            <Label htmlFor="taxa" className="sr-only">Nova taxa</Label>
+            <Input
+              id="taxa"
+              placeholder="Ex: 7.50"
+              value={taxaEdit}
+              onChange={(e) => setTaxaEdit(e.target.value)}
+              className="flex-1 min-w-0"
+            />
             <Button onClick={handleSaveTaxa} disabled={savingTaxa || !taxaEdit}>
               Atualizar
             </Button>

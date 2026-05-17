@@ -48,19 +48,19 @@ export function Pedidos() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap gap-4 items-end">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 items-end">
         <div>
           <Label htmlFor="start">De</Label>
-          <Input id="start" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-40" />
+          <Input id="start" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-full" />
         </div>
         <div>
           <Label htmlFor="end">Até</Label>
-          <Input id="end" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-40" />
+          <Input id="end" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-full" />
         </div>
-        <div className="w-44">
+        <div className="col-span-2 sm:col-span-1">
           <Label>Status</Label>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger>
+            <SelectTrigger className="w-full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

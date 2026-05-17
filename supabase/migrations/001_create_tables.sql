@@ -139,3 +139,13 @@ CREATE TABLE admins (
   user_id UUID NOT NULL REFERENCES auth.users(id) UNIQUE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+--GRANTS
+
+GRANT SELECT, INSERT, UPDATE ON pedidos TO anon, authenticated;
+GRANT SELECT, INSERT ON pedido_itens TO anon, authenticated;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated;
+
+GRANT SELECT ON cardapio, adicional, retirar_ingred TO anon, authenticated;
+GRANT SELECT, UPDATE ON store_status, delivery_config TO anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ingredientes_indisponiveis_dia TO anon, authenticated;

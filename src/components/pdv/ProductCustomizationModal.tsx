@@ -11,7 +11,9 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
+import { Badge } from '@/components/ui/badge'
 import { formatBRL } from '@/utils/calc'
+import { ChevronDown } from 'lucide-react'
 import { fetchAdicionaisByProduct, fetchRetiradosByProduct } from '@/services/api/cardapio.service'
 
 interface Props {
@@ -21,6 +23,43 @@ interface Props {
   onConfirm: (extras: ExtraOption[], observacoes: string) => void
 }
 
+interface DropdownSectionProps {
+  title: string
+  badgeCount: number
+  isOpen: boolean
+  onToggle: () => void
+  children: React.ReactNode
+}
+
+function DropdownSection({ title, badgeCount, isOpen, onToggle, children }: DropdownSectionProps) {
+  return (
+    <div className="border rounded-lg overflow-hidden">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="w-full flex items-center justify-between px-4 py-3 bg-muted/40 hover:bg-muted/70 transition-colors text-left"
+      >
+        <div className="flex items-center gap-2">
+          <span className="font-medium text-sm">{title}</span>
+          {badgeCount > 0 && (
+            <Badge variant="secondary" className="text-xs h-5 px-1.5">
+              {badgeCount}
+            </Badge>
+          )}
+        </div>
+        <ChevronDown
+          className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
+        />
+      </button>
+      {isOpen && (
+        <div className="px-4 py-3 space-y-2.5 border-t bg-background">
+          {children}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function ProductCustomizationModal({ item, open, onClose, onConfirm }: Props) {
   const [adicionais, setAdicionais] = useState<Adicional[]>([])
   const [retiradas, setRetiradas] = useState<string[]>([])
@@ -28,12 +67,16 @@ export function ProductCustomizationModal({ item, open, onClose, onConfirm }: Pr
   const [selectedRem, setSelectedRem] = useState<Set<string>>(new Set())
   const [observacoes, setObservacoes] = useState('')
   const [loading, setLoading] = useState(false)
+  const [addOpen, setAddOpen] = useState(false)
+  const [remOpen, setRemOpen] = useState(false)
 
   useEffect(() => {
     if (!item || !open) return
     setSelectedAdd(new Set())
     setSelectedRem(new Set())
     setObservacoes('')
+    setAddOpen(false)
+    setRemOpen(false)
     setLoading(true)
 
     Promise.all([
@@ -42,7 +85,7 @@ export function ProductCustomizationModal({ item, open, onClose, onConfirm }: Pr
     ])
       .then(([ads, rets]) => {
         setAdicionais(ads)
-        setRetiradas(rets)
+        setRetiradas(rets.length > 0 ? rets : item.ingredientes)
       })
       .catch(console.error)
       .finally(() => setLoading(false))
@@ -87,58 +130,57 @@ export function ProductCustomizationModal({ item, open, onClose, onConfirm }: Pr
         {loading ? (
           <p className="text-center py-4 text-muted-foreground">Carregando opções…</p>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {adicionais.length > 0 && (
-              <div>
-                <h4 className="font-semibold mb-2">Adicionais</h4>
-                <div className="space-y-2">
-                  {adicionais.map((a) => (
-                    <div key={a.id} className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Checkbox
-                          id={`add-${a.id}`}
-                          checked={selectedAdd.has(a.nome)}
-                          onCheckedChange={() => toggleAdd(a.nome)}
-                        />
-                        <Label htmlFor={`add-${a.id}`} className="capitalize cursor-pointer">
-                          {a.nome}
-                        </Label>
-                      </div>
-                      <span className="text-sm text-primary font-medium">
-                        +{formatBRL(a.preco)}
-                      </span>
+              <DropdownSection
+                title="Adicionais"
+                badgeCount={selectedAdd.size}
+                isOpen={addOpen}
+                onToggle={() => setAddOpen((v) => !v)}
+              >
+                {adicionais.map((a) => (
+                  <div key={a.id} className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id={`add-${a.id}`}
+                        checked={selectedAdd.has(a.nome)}
+                        onCheckedChange={() => toggleAdd(a.nome)}
+                      />
+                      <Label htmlFor={`add-${a.id}`} className="capitalize cursor-pointer text-sm">
+                        {a.nome}
+                      </Label>
                     </div>
-                  ))}
-                </div>
-              </div>
+                    <span className="text-sm text-primary font-medium">+{formatBRL(a.preco)}</span>
+                  </div>
+                ))}
+              </DropdownSection>
             )}
 
             {retiradas.length > 0 && (
-              <>
-                {adicionais.length > 0 && <Separator />}
-                <div>
-                  <h4 className="font-semibold mb-2">Retirar ingredientes</h4>
-                  <div className="space-y-2">
-                    {retiradas.map((nome) => (
-                      <div key={nome} className="flex items-center gap-2">
-                        <Checkbox
-                          id={`rem-${nome}`}
-                          checked={selectedRem.has(nome)}
-                          onCheckedChange={() => toggleRem(nome)}
-                        />
-                        <Label htmlFor={`rem-${nome}`} className="capitalize cursor-pointer">
-                          sem {nome}
-                        </Label>
-                      </div>
-                    ))}
+              <DropdownSection
+                title="Retirar ingredientes"
+                badgeCount={selectedRem.size}
+                isOpen={remOpen}
+                onToggle={() => setRemOpen((v) => !v)}
+              >
+                {retiradas.map((nome) => (
+                  <div key={nome} className="flex items-center gap-2">
+                    <Checkbox
+                      id={`rem-${nome}`}
+                      checked={selectedRem.has(nome)}
+                      onCheckedChange={() => toggleRem(nome)}
+                    />
+                    <Label htmlFor={`rem-${nome}`} className="capitalize cursor-pointer text-sm">
+                      sem {nome}
+                    </Label>
                   </div>
-                </div>
-              </>
+                ))}
+              </DropdownSection>
             )}
 
             <Separator />
             <div>
-              <Label htmlFor="obs" className="font-semibold">Observações</Label>
+              <Label htmlFor="obs" className="font-semibold text-sm">Observações</Label>
               <textarea
                 id="obs"
                 value={observacoes}

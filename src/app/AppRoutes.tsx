@@ -29,22 +29,24 @@ function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-muted/30">
       <header className="bg-white border-b sticky top-0 z-30">
-        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
-          <span className="font-bold text-primary">Luizão Admin</span>
+        <div className="max-w-6xl mx-auto px-4">
+          <div className="flex items-center justify-between py-2 gap-2">
+            <span className="font-bold text-primary shrink-0">Luizão Admin</span>
+            <Button size="sm" variant="ghost" onClick={handleLogout}>
+              <LogOut className="h-4 w-4" />
+            </Button>
+          </div>
           <Tabs
             value={tabValue}
             onValueChange={(v) => navigate(`/admin/${v === 'dashboard' ? '' : v}`)}
           >
-            <TabsList>
-              <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-              <TabsTrigger value="cardapio">Cardápio</TabsTrigger>
-              <TabsTrigger value="pedidos">Pedidos</TabsTrigger>
-              <TabsTrigger value="financeiro">Financeiro</TabsTrigger>
+            <TabsList className="w-full grid grid-cols-4 mb-2">
+              <TabsTrigger value="dashboard" className="text-xs sm:text-sm">Dashboard</TabsTrigger>
+              <TabsTrigger value="cardapio" className="text-xs sm:text-sm">Cardápio</TabsTrigger>
+              <TabsTrigger value="pedidos" className="text-xs sm:text-sm">Pedidos</TabsTrigger>
+              <TabsTrigger value="financeiro" className="text-xs sm:text-sm">Financeiro</TabsTrigger>
             </TabsList>
           </Tabs>
-          <Button size="sm" variant="ghost" onClick={handleLogout}>
-            <LogOut className="h-4 w-4" />
-          </Button>
         </div>
       </header>
       <main className="max-w-6xl mx-auto px-4 py-6">{children}</main>

@@ -7,6 +7,7 @@ import { useCart } from '@/store/useCart'
 import { CategorySection } from '@/components/pdv/CategorySection'
 import { ProductCustomizationModal } from '@/components/pdv/ProductCustomizationModal'
 import { CartDrawer } from '@/components/pdv/CartDrawer'
+import { SuccessModal } from '@/components/pdv/SuccessModal'
 import { Button } from '@/components/ui/button'
 import { ShoppingCart, Clock, AlertTriangle } from 'lucide-react'
 import { gerarCartKey } from '@/utils/pedido'
@@ -21,6 +22,8 @@ export function Cardapio() {
   const { items: cartItems, add } = useCart()
   const [customItem, setCustomItem] = useState<ItemCardapio | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [successNome, setSuccessNome] = useState('')
+  const [showSuccess, setShowSuccess] = useState(false)
 
   const storeOpen = status?.is_open ?? true
   const tempoEspera = status?.tempo_espera_padrao ?? 30
@@ -126,7 +129,14 @@ export function Cardapio() {
       <CartDrawer
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
+        onSuccess={(nome) => { setSuccessNome(nome); setShowSuccess(true) }}
         deliveryFee={fee}
+      />
+
+      <SuccessModal
+        open={showSuccess}
+        clienteName={successNome}
+        onClose={() => setShowSuccess(false)}
       />
     </div>
   )

@@ -11,16 +11,16 @@ import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Separator } from '@/components/ui/separator'
 import { PixKeyDisplay } from './PixKeyDisplay'
-import { SuccessModal } from './SuccessModal'
 import { X, Minus, Plus, ShoppingCart } from 'lucide-react'
 
 interface Props {
   open: boolean
   onClose: () => void
+  onSuccess: (nome: string) => void
   deliveryFee: number
 }
 
-export function CartDrawer({ open, onClose, deliveryFee }: Props) {
+export function CartDrawer({ open, onClose, onSuccess, deliveryFee }: Props) {
   const { items, remove, updateQty, clear } = useCart()
   const subtotal = useCartSubtotal()
 
@@ -34,8 +34,6 @@ export function CartDrawer({ open, onClose, deliveryFee }: Props) {
   const [valorPago, setValorPago] = useState('')
   const [loading, setLoading] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
-  const [successCliente, setSuccessCliente] = useState('')
-  const [showSuccess, setShowSuccess] = useState(false)
   const submitting = useRef(false)
 
   const taxa = tipoentrega === 'entrega' ? deliveryFee : 0
@@ -86,7 +84,7 @@ export function CartDrawer({ open, onClose, deliveryFee }: Props) {
         total,
       })
 
-      setSuccessCliente(cliente.trim())
+      const nome = cliente.trim()
       clear()
       setCliente('')
       setPhone('')
@@ -97,7 +95,7 @@ export function CartDrawer({ open, onClose, deliveryFee }: Props) {
       setTipoentrega('retirada')
       setFormapagamento('dinheiro')
       onClose()
-      setShowSuccess(true)
+      onSuccess(nome)
     } catch (err: unknown) {
       const e = err as Record<string, unknown>
       console.error('Supabase error:', e?.code, e?.message, e?.details, e?.hint)
@@ -108,7 +106,7 @@ export function CartDrawer({ open, onClose, deliveryFee }: Props) {
     }
   }
 
-  if (!open && !showSuccess) return null
+  if (!open) return null
 
   return (
     <>
@@ -154,14 +152,14 @@ export function CartDrawer({ open, onClose, deliveryFee }: Props) {
                     </p>
                   </div>
                   <div className="flex items-center gap-2 mt-2">
-                    <Button size="icon" variant="outline" className="h-7 w-7"
+                    <Button size="icon" variant="outline" className="h-9 w-9"
                       onClick={() => remove(item.cartKey)}>
-                      <Minus className="h-3 w-3" />
+                      <Minus className="h-4 w-4" />
                     </Button>
                     <span className="text-sm font-medium w-6 text-center">{item.qty}</span>
-                    <Button size="icon" variant="outline" className="h-7 w-7"
+                    <Button size="icon" variant="outline" className="h-9 w-9"
                       onClick={() => updateQty(item.cartKey, item.qty + 1)}>
-                      <Plus className="h-3 w-3" />
+                      <Plus className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
@@ -223,7 +221,7 @@ export function CartDrawer({ open, onClose, deliveryFee }: Props) {
               <RadioGroup
                 value={tipoentrega}
                 onValueChange={(v) => setTipoentrega(v as TipoEntrega)}
-                className="flex gap-4 mt-1"
+                className="flex flex-wrap gap-3 mt-1"
               >
                 {(['retirada', 'entrega', 'local'] as TipoEntrega[]).map((t) => (
                   <div key={t} className="flex items-center gap-2">
@@ -279,7 +277,7 @@ export function CartDrawer({ open, onClose, deliveryFee }: Props) {
               <RadioGroup
                 value={formapagamento}
                 onValueChange={(v) => setFormapagamento(v as FormaPagamento)}
-                className="flex gap-4 mt-1"
+                className="flex flex-wrap gap-3 mt-1"
               >
                 {(['dinheiro', 'cartao', 'pix'] as FormaPagamento[]).map((f) => (
                   <div key={f} className="flex items-center gap-2">
@@ -336,11 +334,6 @@ export function CartDrawer({ open, onClose, deliveryFee }: Props) {
         </div>
       </div>}
 
-      <SuccessModal
-        open={showSuccess}
-        clienteName={successCliente}
-        onClose={() => setShowSuccess(false)}
-      />
     </>
   )
 }

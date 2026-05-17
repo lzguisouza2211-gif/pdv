@@ -13,7 +13,7 @@ export function CategorySection({ categoria, itens, onAdd, storeOpen }: Props) {
 
   return (
     <section className="mb-8">
-      <h2 className="mb-4 text-2xl font-bold text-foreground border-b border-border pb-2">
+      <h2 className="mb-4 text-xl sm:text-2xl font-bold text-foreground border-b border-border pb-2">
         {categoria}
       </h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

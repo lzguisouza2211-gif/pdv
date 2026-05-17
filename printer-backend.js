@@ -1,17 +1,18 @@
 /**
- * Servidor de impressão ESC/POS — Express + @node-escpos
+ * Backend local: impressão ESC/POS + notificações WhatsApp (Z-API)
  *
- * Instalação das dependências do printer:
- *   npm install express cors @node-escpos/core @node-escpos/serial serialport
+ * Instalação:
+ *   npm install express cors dotenv @node-escpos/core @node-escpos/serial serialport
  *
- * Configuração:
- *   Defina a variável PRINTER_PATH com o caminho da porta serial (ex: /dev/usb/lp0 no Linux
- *   ou COM3 no Windows). Por padrão tentará COM1 / /dev/usb/lp0.
+ * Configuração via .env:
+ *   PRINTER_PATH  — porta serial da impressora (ex: COM3 no Windows, /dev/usb/lp0 no Linux)
+ *   ZAPI_INSTANCE_ID, ZAPI_TOKEN, ZAPI_CLIENT_TOKEN — credenciais Z-API (app.z-api.io)
  *
  * Rodando:
  *   node printer-backend.js
  */
 
+import 'dotenv/config'
 import express from 'express'
 import cors from 'cors'
 import { createRequire } from 'module'
@@ -20,6 +21,10 @@ const require = createRequire(import.meta.url)
 const app = express()
 const PORT = process.env.PRINTER_PORT ?? 3000
 const PRINTER_PATH = process.env.PRINTER_PATH ?? (process.platform === 'win32' ? 'COM1' : '/dev/usb/lp0')
+
+const ZAPI_INSTANCE_ID = process.env.ZAPI_INSTANCE_ID
+const ZAPI_TOKEN = process.env.ZAPI_TOKEN
+const ZAPI_CLIENT_TOKEN = process.env.ZAPI_CLIENT_TOKEN
 
 app.use(cors())
 app.use(express.json())
@@ -86,7 +91,43 @@ app.post('/print', async (req, res) => {
   }
 })
 
+app.post('/send-whatsapp', async (req, res) => {
+  const { phone, message } = req.body
+  if (!phone || !message) return res.status(400).json({ error: 'phone and message required' })
+
+  if (!ZAPI_INSTANCE_ID || !ZAPI_TOKEN || ZAPI_INSTANCE_ID === 'SEU_INSTANCE_ID') {
+    console.warn('[WPP] Z-API não configurado — notificação ignorada')
+    return res.json({ ok: true, skipped: true })
+  }
+
+  try {
+    const url = `https://api.z-api.io/instances/${ZAPI_INSTANCE_ID}/token/${ZAPI_TOKEN}/send-text`
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Client-Token': ZAPI_CLIENT_TOKEN,
+      },
+      body: JSON.stringify({ phone, message }),
+    })
+
+    if (!response.ok) {
+      const err = await response.text()
+      console.error('[WPP] Z-API error:', err)
+      return res.status(502).json({ error: err })
+    }
+
+    const data = await response.json()
+    console.log(`[WPP] Mensagem enviada para ${phone}`)
+    res.json({ ok: true, data })
+  } catch (err) {
+    console.error('[WPP] Erro ao enviar:', err)
+    res.status(500).json({ error: String(err) })
+  }
+})
+
 app.listen(PORT, () => {
-  console.log(`Printer backend rodando em http://localhost:${PORT}`)
-  console.log(`Porta da impressora: ${PRINTER_PATH}`)
+  console.log(`Backend rodando em http://localhost:${PORT}`)
+  console.log(`Impressora: ${PRINTER_PATH}`)
+  console.log(`WhatsApp (Z-API): ${ZAPI_INSTANCE_ID ? 'configurado' : 'NÃO configurado'}`)
 })

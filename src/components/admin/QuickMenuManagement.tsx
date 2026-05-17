@@ -48,39 +48,16 @@ export function QuickMenuManagement() {
           <h3 className="font-semibold text-lg border-b pb-1 mb-3">{cat}</h3>
           <div className="space-y-2">
             {itens.filter((i) => i.categoria === cat).map((item) => (
-              <div key={item.id} className="flex items-center gap-3 border rounded-md p-3">
-                <Switch
-                  checked={item.disponivel}
-                  onCheckedChange={() => handleToggleDisponivel(item.id, item.disponivel)}
-                />
-                <span className="flex-1 capitalize text-sm">{item.nome}</span>
-                <div className="flex items-center gap-2">
-                  {editingPreco[item.id] !== undefined ? (
-                    <>
-                      <Input
-                        className="w-24 h-8 text-sm"
-                        value={editingPreco[item.id]}
-                        onChange={(e) =>
-                          setEditingPreco((prev) => ({ ...prev, [item.id]: e.target.value }))
-                        }
-                      />
-                      <Button size="sm" className="h-8" onClick={() => handleSavePreco(item.id)}>
-                        Salvar
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-8"
-                        onClick={() =>
-                          setEditingPreco((prev) => { const n = { ...prev }; delete n[item.id]; return n })
-                        }
-                      >
-                        Cancelar
-                      </Button>
-                    </>
-                  ) : (
+              <div key={item.id} className="border rounded-md p-3 space-y-2">
+                <div className="flex items-center gap-3">
+                  <Switch
+                    checked={item.disponivel}
+                    onCheckedChange={() => handleToggleDisponivel(item.id, item.disponivel)}
+                  />
+                  <span className="flex-1 min-w-0 capitalize text-sm truncate">{item.nome}</span>
+                  {editingPreco[item.id] === undefined && (
                     <button
-                      className="text-sm text-primary underline hover:no-underline"
+                      className="text-sm text-primary underline hover:no-underline shrink-0"
                       onClick={() =>
                         setEditingPreco((prev) => ({ ...prev, [item.id]: String(item.preco) }))
                       }
@@ -89,6 +66,30 @@ export function QuickMenuManagement() {
                     </button>
                   )}
                 </div>
+                {editingPreco[item.id] !== undefined && (
+                  <div className="flex items-center gap-2 pl-9">
+                    <Input
+                      className="flex-1 min-w-0 h-8 text-sm"
+                      value={editingPreco[item.id]}
+                      onChange={(e) =>
+                        setEditingPreco((prev) => ({ ...prev, [item.id]: e.target.value }))
+                      }
+                    />
+                    <Button size="sm" className="h-8 shrink-0" onClick={() => handleSavePreco(item.id)}>
+                      Salvar
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-8 shrink-0"
+                      onClick={() =>
+                        setEditingPreco((prev) => { const n = { ...prev }; delete n[item.id]; return n })
+                      }
+                    >
+                      Cancelar
+                    </Button>
+                  </div>
+                )}
               </div>
             ))}
           </div>

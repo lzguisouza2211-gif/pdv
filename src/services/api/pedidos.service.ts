@@ -1,5 +1,6 @@
 import { supabase } from '@/services/supabaseClient'
 import { Pedido, PedidoStatus } from '@/types'
+import { enviarNotificacaoWpp } from '@/services/whatsapp.service'
 
 type PedidoPayload = Omit<Pedido, 'id' | 'created_at' | 'updated_at' | 'status'>
 
@@ -8,12 +9,20 @@ export async function criarPedido(payload: PedidoPayload): Promise<void> {
   const timeout = setTimeout(() => controller.abort(), 15_000)
 
   try {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('pedidos')
       .insert([{ ...payload, status: 'Recebido' }])
+      .select('id')
+      .single()
       .abortSignal(controller.signal)
 
     if (error) throw error
+
+    const nome = payload.cliente.split(' ')[0]
+    const mensagem =
+      `Olá, ${nome}! 🎉 Seu pedido *#${data.id}* foi recebido com sucesso!\n\n` +
+      `Em breve começamos a preparar. Te avisamos aqui! 😊`
+    void enviarNotificacaoWpp(payload.phone, mensagem)
   } finally {
     clearTimeout(timeout)
   }
@@ -51,22 +60,35 @@ export async function fetchPedidos(
   return data as Pedido[]
 }
 
-export async function avancarStatus(
-  id: string,
-  currentStatus: PedidoStatus
-): Promise<void> {
+export async function avancarStatus(pedido: Pedido): Promise<void> {
   const next: Record<PedidoStatus, PedidoStatus | null> = {
     Recebido: 'Em preparo',
     'Em preparo': 'Finalizado',
     Finalizado: null,
   }
-  const nextStatus = next[currentStatus]
+  const nextStatus = next[pedido.status]
   if (!nextStatus) return
 
   const { error } = await supabase
     .from('pedidos')
     .update({ status: nextStatus })
-    .eq('id', id)
+    .eq('id', pedido.id)
 
   if (error) throw error
+
+  const nome = pedido.cliente.split(' ')[0]
+  let mensagem = ''
+
+  if (nextStatus === 'Em preparo') {
+    mensagem =
+      `🍽️ Boa notícia, ${nome}! Seu pedido *#${pedido.id}* já está sendo preparado!\n\n` +
+      `Em breve estará pronto.`
+  } else if (nextStatus === 'Finalizado') {
+    mensagem =
+      pedido.tipoentrega === 'entrega'
+        ? `🛵 Seu pedido *#${pedido.id}* saiu para entrega, ${nome}! Já vem aí! 📦`
+        : `✅ Pronto, ${nome}! Seu pedido *#${pedido.id}* está pronto para retirada! 😄`
+  }
+
+  if (mensagem) void enviarNotificacaoWpp(pedido.phone, mensagem)
 }

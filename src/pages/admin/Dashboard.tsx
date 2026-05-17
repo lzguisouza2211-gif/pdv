@@ -117,7 +117,7 @@ export function Dashboard() {
               placeholder={String(status?.tempo_espera_padrao ?? 30)}
               value={tempoEdit}
               onChange={(e) => setTempoEdit(e.target.value)}
-              className="w-28"
+              className="flex-1 min-w-0"
             />
             <Button onClick={handleSaveTempo} disabled={savingTempo || !tempoEdit}>
               Salvar
