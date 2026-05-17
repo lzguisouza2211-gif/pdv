@@ -1,0 +1,25 @@
+INSERT INTO ingredientes_indisponiveis_dia (ingrediente, indisponivel, pg, valid_on)
+VALUES
+  ('pao hamburguer', false, true, CURRENT_DATE),
+  ('pao frances', false, true, CURRENT_DATE),
+  ('tomate', false, true, CURRENT_DATE),
+  ('maionese', false, true, CURRENT_DATE),
+  ('hamburguer', false, true, CURRENT_DATE),
+  ('milho', false, true, CURRENT_DATE),
+  ('bacon', false, true, CURRENT_DATE),
+  ('calabresa', false, true, CURRENT_DATE),
+  ('mussarela', false, true, CURRENT_DATE),
+  ('pernil', false, true, CURRENT_DATE),
+  ('presunto', false, true, CURRENT_DATE),
+  ('frango file', false, true, CURRENT_DATE),
+  ('frango desfiado', false, true, CURRENT_DATE),
+  ('ovo', false, true, CURRENT_DATE),
+  ('cebola', false, true, CURRENT_DATE),
+  ('batata palha', false, true, CURRENT_DATE),
+  ('alface', false, true, CURRENT_DATE),
+  ('catupiry', false, true, CURRENT_DATE),
+  ('cheddar', false, true, CURRENT_DATE),
+  ('abacaxi', false, true, CURRENT_DATE),
+  ('contra file', false, true, CURRENT_DATE),
+  ('batata', false, true, CURRENT_DATE)
+ON CONFLICT (ingrediente) DO NOTHING;
