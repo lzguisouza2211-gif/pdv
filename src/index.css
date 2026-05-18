@@ -57,6 +57,10 @@
     @apply bg-background text-foreground;
     font-family: system-ui, -apple-system, sans-serif;
   }
+  /* Prevent iOS zoom on input focus */
+  input, select, textarea {
+    font-size: max(16px, 1em);
+  }
 }
 
 /* Cart drawer animation */

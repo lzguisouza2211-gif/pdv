@@ -1,0 +1,5 @@
+ALTER TABLE clientes
+  ADD COLUMN IF NOT EXISTS tipoentrega TEXT,
+  ADD COLUMN IF NOT EXISTS endereco    TEXT,
+  ADD COLUMN IF NOT EXISTS numero      TEXT,
+  ADD COLUMN IF NOT EXISTS bairro      TEXT;

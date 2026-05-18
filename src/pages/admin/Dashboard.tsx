@@ -10,15 +10,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { updateStoreOpen, updateTempoEspera } from '@/services/api/storeStatus.service'
 import { formatBRL } from '@/utils/calc'
 import { useState } from 'react'
-import { ShoppingBag, DollarSign, TrendingUp, Clock } from 'lucide-react'
+import { ShoppingBag, DollarSign, TrendingUp, Clock, ChevronDown } from 'lucide-react'
 
 export function Dashboard() {
   const { pedidos, reload } = usePedidos()
   const { status, reload: reloadStatus } = useStoreStatus()
   const [tempoEdit, setTempoEdit] = useState('')
   const [savingTempo, setSavingTempo] = useState(false)
+  const [ingredientesOpen, setIngredientesOpen] = useState(false)
 
-  const pedidosDoDia = pedidos
+  const pedidosDoDia = pedidos.filter(p => p.status !== 'Cancelado')
   const faturamento = pedidosDoDia.reduce((s, p) => s + p.total, 0)
   const ticketMedio = pedidosDoDia.length > 0 ? faturamento / pedidosDoDia.length : 0
 
@@ -128,12 +129,22 @@ export function Dashboard() {
 
       {/* Ingredientes */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Ingredientes Indisponíveis</CardTitle>
+        <CardHeader
+          className="cursor-pointer select-none"
+          onClick={() => setIngredientesOpen((o) => !o)}
+        >
+          <CardTitle className="text-base flex items-center justify-between">
+            Ingredientes Indisponíveis
+            <ChevronDown
+              className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${ingredientesOpen ? 'rotate-180' : ''}`}
+            />
+          </CardTitle>
         </CardHeader>
-        <CardContent>
-          <IngredientesIndisponiveisPanel />
-        </CardContent>
+        {ingredientesOpen && (
+          <CardContent>
+            <IngredientesIndisponiveisPanel />
+          </CardContent>
+        )}
       </Card>
 
       {/* Monitor de pedidos */}

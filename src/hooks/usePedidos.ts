@@ -5,6 +5,9 @@ import { supabase } from '@/services/supabaseClient'
 import { Pedido } from '@/types'
 import { playNewOrderSound } from '@/utils/notificationSound'
 
+// Polling de segurança a cada 8s — cobre quando o canal Realtime cai ou não está habilitado
+const HEARTBEAT_MS = 8_000
+
 export function usePedidos() {
   const { pedidos, setPedidos, addPedido, updatePedido } = usePedidosStore()
   const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -21,9 +24,16 @@ export function usePedidos() {
   useEffect(() => {
     load()
 
-    // heartbeat a cada 30s — garante consistência se o canal cair
-    heartbeatRef.current = setInterval(load, 30_000)
+    // Polling de segurança — garante consistência mesmo sem Realtime
+    heartbeatRef.current = setInterval(load, HEARTBEAT_MS)
 
+    // Recarrega quando o usuário volta para a aba (ex: estava em outra aba)
+    function onVisible() {
+      if (document.visibilityState === 'visible') load()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+
+    // Canal Realtime para atualizações instantâneas
     const channel = supabase
       .channel('pedidos-realtime')
       .on(
@@ -40,14 +50,13 @@ export function usePedidos() {
         (payload) => updatePedido(payload.new as Pedido)
       )
       .subscribe((status) => {
-        // se o canal cair, força um reload completo
-        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          load()
-        }
+        // Canal caiu — força reload imediato
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') load()
       })
 
     return () => {
       if (heartbeatRef.current) clearInterval(heartbeatRef.current)
+      document.removeEventListener('visibilitychange', onVisible)
       supabase.removeChannel(channel)
     }
   }, [load, addPedido, updatePedido])

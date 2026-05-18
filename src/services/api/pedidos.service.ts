@@ -4,7 +4,7 @@ import { enviarNotificacaoWpp } from '@/services/whatsapp.service'
 
 type PedidoPayload = Omit<Pedido, 'id' | 'created_at' | 'updated_at' | 'status'>
 
-export async function criarPedido(payload: PedidoPayload): Promise<void> {
+export async function criarPedido(payload: PedidoPayload): Promise<string> {
   const { data, error } = await supabase
     .from('pedidos')
     .insert([{ ...payload, status: 'Recebido' }])
@@ -18,6 +18,8 @@ export async function criarPedido(payload: PedidoPayload): Promise<void> {
     `Olá, ${nome}! 🎉 Seu pedido *#${data.id}* foi recebido com sucesso!\n\n` +
     `Em breve começamos a preparar. Te avisamos aqui! 😊`
   void enviarNotificacaoWpp(payload.phone, mensagem)
+
+  return data.id as string
 }
 
 export async function fetchPedidosDoDia(): Promise<Pedido[]> {
@@ -52,11 +54,34 @@ export async function fetchPedidos(
   return data as Pedido[]
 }
 
+export async function editarPedido(
+  id: string,
+  updates: Partial<Pick<Pedido, 'formapagamento' | 'status' | 'cliente' | 'itens' | 'total'>>
+): Promise<void> {
+  const { error } = await supabase.from('pedidos').update(updates).eq('id', id)
+  if (error) throw error
+}
+
+export async function cancelarPedido(pedido: Pedido): Promise<void> {
+  const { error } = await supabase
+    .from('pedidos')
+    .update({ status: 'Cancelado' })
+    .eq('id', pedido.id)
+  if (error) throw error
+
+  const nome = pedido.cliente.split(' ')[0]
+  const mensagem =
+    `❌ Olá, ${nome}! Infelizmente seu pedido *#${pedido.id}* foi cancelado.\n\n` +
+    `Entre em contato para mais informações.`
+  void enviarNotificacaoWpp(pedido.phone, mensagem)
+}
+
 export async function avancarStatus(pedido: Pedido): Promise<void> {
   const next: Record<PedidoStatus, PedidoStatus | null> = {
     Recebido: 'Em preparo',
     'Em preparo': 'Finalizado',
     Finalizado: null,
+    Cancelado: null,
   }
   const nextStatus = next[pedido.status]
   if (!nextStatus) return

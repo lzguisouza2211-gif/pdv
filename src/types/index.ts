@@ -28,7 +28,7 @@ export type CartItem = {
   extras: ExtraOption[]
 }
 
-export type PedidoStatus = 'Recebido' | 'Em preparo' | 'Finalizado'
+export type PedidoStatus = 'Recebido' | 'Em preparo' | 'Finalizado' | 'Cancelado'
 export type TipoEntrega = 'retirada' | 'entrega' | 'local'
 export type FormaPagamento = 'dinheiro' | 'cartao' | 'pix'
 
@@ -58,6 +58,22 @@ export type Pedido = {
   status: PedidoStatus
   created_at: string
   updated_at: string
+  cliente_id?: number
+}
+
+export interface Cliente {
+  id: number
+  nome: string
+  phone: string
+  total_pedidos: number
+  total_gasto: number
+  ultima_compra?: string
+  criado_at: string
+  updated_at: string
+  tipoentrega?: TipoEntrega
+  endereco?: string
+  numero?: string
+  bairro?: string
 }
 
 export type StoreStatus = {

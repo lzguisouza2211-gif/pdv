@@ -1,10 +1,11 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useCart, useCartSubtotal } from '@/store/useCart'
-import { TipoEntrega, FormaPagamento, CartItem, ExtraOption, ItemCardapio } from '@/types'
+import { TipoEntrega, FormaPagamento, CartItem, ExtraOption, ItemCardapio, Cliente } from '@/types'
 import { normalizePedidoPayload, gerarCartKey } from '@/utils/pedido'
 import { validarTelefoneBrasileiro, formatarTelefone } from '@/utils/validation'
 import { formatBRL, calcTotal, calcTroco, calcItemPrice } from '@/utils/calc'
 import { criarPedido } from '@/services/api/pedidos.service'
+import { buscarClientePorTelefone, saveClienteSession, getClienteSession } from '@/services/api/clientes.service'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -16,10 +17,22 @@ import { X, Minus, Plus, ShoppingCart, Pencil } from 'lucide-react'
 
 const CUSTOM_CATS = new Set(['Lanches', 'Macarrão', 'Omeletes'])
 
+export interface CheckoutSuccess {
+  nome: string
+  phone: string
+  total: number
+  pedidoId: string
+  clienteEncontrado: Cliente | null
+  tipoentrega: TipoEntrega
+  endereco: string
+  numero: string
+  bairro: string
+}
+
 interface Props {
   open: boolean
   onClose: () => void
-  onSuccess: (nome: string) => void
+  onSuccess: (result: CheckoutSuccess) => void
   deliveryFee: number
 }
 
@@ -38,7 +51,55 @@ export function CartDrawer({ open, onClose, onSuccess, deliveryFee }: Props) {
   const [valorPago, setValorPago] = useState('')
   const [loading, setLoading] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [clienteEncontrado, setClienteEncontrado] = useState<Cliente | null>(null)
   const submitting = useRef(false)
+  const phoneRef = useRef(phone)
+  useEffect(() => { phoneRef.current = phone }, [phone])
+
+  // Pré-preenche ao abrir o drawer se o formulário estiver vazio e houver sessão salva
+  useEffect(() => {
+    if (!open || phoneRef.current) return
+    const session = getClienteSession()
+    if (!session?.phone) return
+    setPhone(session.phone)
+    if (session.nome) setCliente(session.nome)
+    if (session.tipoentrega) setTipoentrega(session.tipoentrega)
+    if (session.endereco) setEndereco(session.endereco)
+    if (session.numero) setNumero(session.numero)
+    if (session.bairro) setBairro(session.bairro)
+    buscarClientePorTelefone(session.phone)
+      .then((found) => {
+        if (!found) return
+        setClienteEncontrado(found)
+        setCliente(found.nome)
+        if (found.tipoentrega) setTipoentrega(found.tipoentrega)
+        if (found.endereco) setEndereco(found.endereco)
+        if (found.numero) setNumero(found.numero)
+        if (found.bairro) setBairro(found.bairro)
+        saveClienteSession(session.phone, found.nome)
+      })
+      .catch(() => {})
+  }, [open])
+
+  async function handlePhoneBlur() {
+    if (!validarTelefoneBrasileiro(phone)) return
+    try {
+      const found = await buscarClientePorTelefone(phone)
+      if (found) {
+        setClienteEncontrado(found)
+        if (!cliente.trim()) setCliente(found.nome)
+        if (found.tipoentrega) setTipoentrega(found.tipoentrega)
+        if (found.endereco) setEndereco(found.endereco)
+        if (found.numero) setNumero(found.numero)
+        if (found.bairro) setBairro(found.bairro)
+        saveClienteSession(phone, found.nome)
+      } else {
+        setClienteEncontrado(null)
+      }
+    } catch (err) {
+      console.error('[CartDrawer] erro no lookup de cliente:', err)
+    }
+  }
 
   const taxa = tipoentrega === 'entrega' ? deliveryFee : 0
   const total = calcTotal(subtotal, taxa)
@@ -74,7 +135,7 @@ export function CartDrawer({ open, onClose, onSuccess, deliveryFee }: Props) {
           ? calcTroco(parseFloat(valorPago.replace(',', '.')), total)
           : undefined
 
-      await criarPedido({
+      const pedidoId = await criarPedido({
         cliente: cliente.trim(),
         phone,
         tipoentrega,
@@ -89,6 +150,10 @@ export function CartDrawer({ open, onClose, onSuccess, deliveryFee }: Props) {
       })
 
       const nome = cliente.trim()
+      const phoneSnapshot = phone
+      const totalSnapshot = total
+      const clienteSnapshot = clienteEncontrado
+      const enderecoSnapshot = { tipoentrega, endereco, numero, bairro }
       clear()
       setCliente('')
       setPhone('')
@@ -98,8 +163,16 @@ export function CartDrawer({ open, onClose, onSuccess, deliveryFee }: Props) {
       setValorPago('')
       setTipoentrega('retirada')
       setFormapagamento('dinheiro')
+      setClienteEncontrado(null)
       onClose()
-      onSuccess(nome)
+      onSuccess({
+        nome,
+        phone: phoneSnapshot,
+        total: totalSnapshot,
+        pedidoId,
+        clienteEncontrado: clienteSnapshot,
+        ...enderecoSnapshot,
+      })
     } catch (err: unknown) {
       const e = err as Record<string, unknown>
       console.error('Supabase error:', e?.code, e?.message, e?.details, e?.hint)
@@ -251,6 +324,7 @@ export function CartDrawer({ open, onClose, onSuccess, deliveryFee }: Props) {
                 id="phone"
                 value={phone}
                 onChange={(e) => setPhone(formatarTelefone(e.target.value))}
+                onBlur={handlePhoneBlur}
                 placeholder="(11) 99999-9999"
                 className={errors.phone ? 'border-destructive' : ''}
               />

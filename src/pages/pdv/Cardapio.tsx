@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { ItemCardapio, ExtraOption } from '@/types'
 import { useCardapio } from '@/hooks/useCardapio'
 import { useStoreStatus } from '@/hooks/useStoreStatus'
@@ -6,11 +6,13 @@ import { useDeliveryFee } from '@/hooks/useDeliveryFee'
 import { useCart } from '@/store/useCart'
 import { CategorySection } from '@/components/pdv/CategorySection'
 import { ProductCustomizationModal } from '@/components/pdv/ProductCustomizationModal'
-import { CartDrawer } from '@/components/pdv/CartDrawer'
+import { CartDrawer, CheckoutSuccess } from '@/components/pdv/CartDrawer'
 import { SuccessModal } from '@/components/pdv/SuccessModal'
+import { PhonePromptModal } from '@/components/pdv/PhonePromptModal'
 import { Button } from '@/components/ui/button'
 import { ShoppingCart, Clock, AlertTriangle } from 'lucide-react'
 import { gerarCartKey } from '@/utils/pedido'
+import { getClienteSession, hasSkippedPrompt } from '@/services/api/clientes.service'
 
 const CATEGORIA_ORDER = ['Lanches', 'Macarrão', 'Porções', 'Omeletes', 'Bebidas', 'Cervejas', 'Doces']
 const CUSTOM_CATS = new Set(['Lanches', 'Macarrão', 'Omeletes'])
@@ -22,8 +24,12 @@ export function Cardapio() {
   const { items: cartItems, add } = useCart()
   const [customItem, setCustomItem] = useState<ItemCardapio | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
-  const [successNome, setSuccessNome] = useState('')
   const [showSuccess, setShowSuccess] = useState(false)
+  const [successData, setSuccessData] = useState<CheckoutSuccess | null>(null)
+  const [showPhonePrompt, setShowPhonePrompt] = useState(
+    () => !getClienteSession() && !hasSkippedPrompt()
+  )
+  const catRefs = useRef<Record<string, HTMLDivElement | null>>({})
 
   const storeOpen = status?.is_open ?? true
   const tempoEspera = status?.tempo_espera_padrao ?? 30
@@ -31,6 +37,10 @@ export function Cardapio() {
   const categorias = CATEGORIA_ORDER.filter((cat) =>
     itens.some((i) => i.categoria === cat)
   )
+
+  function scrollToCategory(cat: string) {
+    catRefs.current[cat]?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
 
   function handleAdd(item: ItemCardapio) {
     if (CUSTOM_CATS.has(item.categoria)) {
@@ -99,6 +109,21 @@ export function Cardapio() {
             Loja fechada no momento
           </div>
         )}
+
+        {/* Category pills */}
+        {!loading && !error && categorias.length > 0 && (
+          <div className="flex gap-2 overflow-x-auto px-4 pb-2 pt-1 scrollbar-none border-t">
+            {categorias.map(cat => (
+              <button
+                key={cat}
+                onClick={() => scrollToCategory(cat)}
+                className="flex-none px-4 py-1 rounded-full border text-sm font-medium transition-colors whitespace-nowrap hover:bg-primary hover:text-primary-foreground"
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+        )}
       </header>
 
       <main className="max-w-5xl mx-auto px-4 py-6">
@@ -109,15 +134,22 @@ export function Cardapio() {
           <div className="text-center py-12 text-destructive">{error}</div>
         )}
         {!loading && !error && categorias.map((cat) => (
-          <CategorySection
-            key={cat}
-            categoria={cat}
-            itens={itens.filter((i) => i.categoria === cat)}
-            onAdd={handleAdd}
-            storeOpen={storeOpen}
-          />
+          <div key={cat} ref={el => { catRefs.current[cat] = el }} className="mb-8 scroll-mt-4">
+            <h2 className="text-lg font-bold mb-3 px-1">{cat}</h2>
+            <CategorySection
+              categoria={cat}
+              itens={itens.filter((i) => i.categoria === cat)}
+              onAdd={handleAdd}
+              storeOpen={storeOpen}
+            />
+          </div>
         ))}
       </main>
+
+      <PhonePromptModal
+        open={showPhonePrompt}
+        onDone={() => setShowPhonePrompt(false)}
+      />
 
       <ProductCustomizationModal
         item={customItem}
@@ -129,14 +161,19 @@ export function Cardapio() {
       <CartDrawer
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
-        onSuccess={(nome) => { setSuccessNome(nome); setShowSuccess(true) }}
+        onSuccess={(result) => { setSuccessData(result); setShowSuccess(true) }}
         deliveryFee={fee}
       />
 
       <SuccessModal
         open={showSuccess}
-        clienteName={successNome}
-        onClose={() => setShowSuccess(false)}
+        clienteName={successData?.nome ?? ''}
+        clienteEncontrado={successData?.clienteEncontrado ?? null}
+        nomeCliente={successData?.nome ?? ''}
+        phoneCliente={successData?.phone ?? ''}
+        totalPedido={successData?.total ?? 0}
+        pedidoId={successData?.pedidoId ?? ''}
+        onClose={() => { setShowSuccess(false); setSuccessData(null) }}
       />
     </div>
   )

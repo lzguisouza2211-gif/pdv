@@ -8,15 +8,20 @@ import { Dashboard } from '@/pages/admin/Dashboard'
 import { GestaoCardapio } from '@/pages/admin/GestaoCardapio'
 import { Pedidos } from '@/pages/admin/Pedidos'
 import { Financeiro } from '@/pages/admin/Financeiro'
+import { NovoPedido } from '@/pages/admin/NovoPedido'
+import { Clientes } from '@/pages/admin/Clientes'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
-import { LogOut } from 'lucide-react'
+import { LogOut, Users } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import { useCaixaAutomatico } from '@/hooks/useCaixaAutomatico'
 
 function AdminLayout({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate()
   const location = useLocation()
-  const { setUser } = useUser()
+  const { user, setUser } = useUser()
+
+  useCaixaAutomatico(user?.id)
 
   const tabValue = location.pathname.split('/')[2] ?? 'dashboard'
 
@@ -40,11 +45,16 @@ function AdminLayout({ children }: { children: React.ReactNode }) {
             value={tabValue}
             onValueChange={(v) => navigate(`/admin/${v === 'dashboard' ? '' : v}`)}
           >
-            <TabsList className="w-full grid grid-cols-4 mb-2">
+            <TabsList className="w-full grid grid-cols-6 mb-2">
               <TabsTrigger value="dashboard" className="text-xs sm:text-sm">Dashboard</TabsTrigger>
               <TabsTrigger value="cardapio" className="text-xs sm:text-sm">Cardápio</TabsTrigger>
               <TabsTrigger value="pedidos" className="text-xs sm:text-sm">Pedidos</TabsTrigger>
+              <TabsTrigger value="pedido" className="text-xs sm:text-sm">Novo Pedido</TabsTrigger>
               <TabsTrigger value="financeiro" className="text-xs sm:text-sm">Financeiro</TabsTrigger>
+              <TabsTrigger value="clientes" className="text-xs sm:text-sm flex items-center gap-1">
+                <Users className="h-3.5 w-3.5" />
+                Clientes
+              </TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
@@ -114,11 +124,31 @@ export function AppRoutes() {
         }
       />
       <Route
+        path="/admin/pedido"
+        element={
+          <ProtectedRoute>
+            <AdminLayout>
+              <NovoPedido />
+            </AdminLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/admin/financeiro"
         element={
           <ProtectedRoute>
             <AdminLayout>
               <Financeiro />
+            </AdminLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/clientes"
+        element={
+          <ProtectedRoute>
+            <AdminLayout>
+              <Clientes />
             </AdminLayout>
           </ProtectedRoute>
         }
