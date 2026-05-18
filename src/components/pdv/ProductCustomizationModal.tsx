@@ -21,6 +21,10 @@ interface Props {
   open: boolean
   onClose: () => void
   onConfirm: (extras: ExtraOption[], observacoes: string) => void
+  initialSelectedAdd?: Set<string>
+  initialSelectedRem?: Set<string>
+  initialObservacoes?: string
+  confirmLabel?: string
 }
 
 interface DropdownSectionProps {
@@ -60,7 +64,7 @@ function DropdownSection({ title, badgeCount, isOpen, onToggle, children }: Drop
   )
 }
 
-export function ProductCustomizationModal({ item, open, onClose, onConfirm }: Props) {
+export function ProductCustomizationModal({ item, open, onClose, onConfirm, initialSelectedAdd, initialSelectedRem, initialObservacoes, confirmLabel }: Props) {
   const [adicionais, setAdicionais] = useState<Adicional[]>([])
   const [retiradas, setRetiradas] = useState<string[]>([])
   const [selectedAdd, setSelectedAdd] = useState<Set<string>>(new Set())
@@ -72,9 +76,9 @@ export function ProductCustomizationModal({ item, open, onClose, onConfirm }: Pr
 
   useEffect(() => {
     if (!item || !open) return
-    setSelectedAdd(new Set())
-    setSelectedRem(new Set())
-    setObservacoes('')
+    setSelectedAdd(initialSelectedAdd ? new Set(initialSelectedAdd) : new Set())
+    setSelectedRem(initialSelectedRem ? new Set(initialSelectedRem) : new Set())
+    setObservacoes(initialObservacoes ?? '')
     setAddOpen(false)
     setRemOpen(false)
     setLoading(true)
@@ -195,7 +199,7 @@ export function ProductCustomizationModal({ item, open, onClose, onConfirm }: Pr
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
           <Button onClick={handleConfirm} disabled={loading}>
-            Adicionar ao carrinho
+            {confirmLabel ?? 'Adicionar ao carrinho'}
           </Button>
         </DialogFooter>
       </DialogContent>

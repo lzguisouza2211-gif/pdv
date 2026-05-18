@@ -6,17 +6,16 @@ import { printJob } from '@/services/printer/printQueue'
 
 interface Props {
   pedido: Pedido
-  tipo: 'producao' | 'motoboy'
 }
 
-export function PrintButton({ pedido, tipo }: Props) {
+export function PrintButton({ pedido }: Props) {
   const [printing, setPrinting] = useState(false)
 
   async function handlePrint() {
     if (printing) return
     setPrinting(true)
     try {
-      await printJob(pedido, tipo)
+      await printJob(pedido, 'ambos')
     } catch (err) {
       console.error('Falha na impressão', err)
     } finally {
@@ -27,7 +26,7 @@ export function PrintButton({ pedido, tipo }: Props) {
   return (
     <Button size="sm" variant="outline" onClick={handlePrint} disabled={printing}>
       <Printer className="h-4 w-4 mr-1" />
-      {tipo === 'producao' ? 'Cozinha' : 'Cliente'}
+      {printing ? 'Imprimindo…' : 'Imprimir'}
     </Button>
   )
 }

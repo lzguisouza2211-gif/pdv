@@ -81,8 +81,7 @@ export function OrderMonitor({ pedidos, onUpdate }: Props) {
               {nextLabel}
             </Button>
           )}
-          <PrintButton pedido={p} tipo="producao" />
-          <PrintButton pedido={p} tipo="motoboy" />
+          <PrintButton pedido={p} />
         </div>
       </div>
     )

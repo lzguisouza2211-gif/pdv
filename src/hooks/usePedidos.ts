@@ -7,7 +7,7 @@ import { playNewOrderSound } from '@/utils/notificationSound'
 
 export function usePedidos() {
   const { pedidos, setPedidos, addPedido, updatePedido } = usePedidosStore()
-  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const load = useCallback(async () => {
     try {
@@ -21,8 +21,8 @@ export function usePedidos() {
   useEffect(() => {
     load()
 
-    // polling a cada 2s como garantia
-    pollingRef.current = setInterval(load, 2_000)
+    // heartbeat a cada 30s — garante consistência se o canal cair
+    heartbeatRef.current = setInterval(load, 30_000)
 
     const channel = supabase
       .channel('pedidos-realtime')
@@ -39,10 +39,15 @@ export function usePedidos() {
         { event: 'UPDATE', schema: 'public', table: 'pedidos' },
         (payload) => updatePedido(payload.new as Pedido)
       )
-      .subscribe()
+      .subscribe((status) => {
+        // se o canal cair, força um reload completo
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          load()
+        }
+      })
 
     return () => {
-      if (pollingRef.current) clearInterval(pollingRef.current)
+      if (heartbeatRef.current) clearInterval(heartbeatRef.current)
       supabase.removeChannel(channel)
     }
   }, [load, addPedido, updatePedido])

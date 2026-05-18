@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Pedido, PedidoStatus } from '@/types'
 import { fetchPedidos } from '@/services/api/pedidos.service'
+import { supabase } from '@/services/supabaseClient'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
@@ -26,11 +27,7 @@ export function Pedidos() {
   const [endDate, setEndDate] = useState(today)
   const [statusFilter, setStatusFilter] = useState<string>('todos')
 
-  useEffect(() => {
-    load()
-  }, [startDate, endDate, statusFilter])
-
-  async function load() {
+  const load = useCallback(async () => {
     setLoading(true)
     try {
       const data = await fetchPedidos({
@@ -44,7 +41,21 @@ export function Pedidos() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [startDate, endDate, statusFilter])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  useEffect(() => {
+    const channel = supabase
+      .channel('pedidos-admin-list')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'pedidos' }, () => load())
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'pedidos' }, () => load())
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  }, [load])
 
   return (
     <div className="space-y-4">
@@ -98,8 +109,7 @@ export function Pedidos() {
                 ))}
               </div>
               <div className="flex gap-2">
-                <PrintButton pedido={p} tipo="producao" />
-                <PrintButton pedido={p} tipo="motoboy" />
+                <PrintButton pedido={p} />
               </div>
             </CardContent>
           </Card>

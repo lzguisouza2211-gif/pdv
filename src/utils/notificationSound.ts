@@ -32,9 +32,9 @@ export function playNewOrderSound() {
     // resume necessário se o contexto foi suspenso pelo browser (política de autoplay)
     audioCtx.resume().then(() => {
       const now = audioCtx.currentTime
-      beep(880, now, 0.12)         // primeiro ding  (A5)
-      beep(1108, now + 0.18, 0.12) // segundo ding   (C#6)
-      beep(1320, now + 0.36, 0.18) // terceiro ding  (E6)
+      beep(audioCtx, 880, now, 0.12)         // primeiro ding  (A5)
+      beep(audioCtx, 1108, now + 0.18, 0.12) // segundo ding   (C#6)
+      beep(audioCtx, 1320, now + 0.36, 0.18) // terceiro ding  (E6)
     })
   } catch {
     // Web Audio API não disponível ou bloqueado — ignora silenciosamente

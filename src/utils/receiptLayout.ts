@@ -14,6 +14,12 @@ function center(text: string, total = COL): string {
 
 const SEP = '-'.repeat(COL)
 
+const pgLabel: Record<string, string> = {
+  dinheiro: 'DINHEIRO',
+  cartao: 'CARTAO',
+  pix: 'PIX',
+}
+
 export function buildProductionReceipt(pedido: Pedido): string {
   const time = new Date(pedido.created_at).toLocaleTimeString('pt-BR', {
     hour: '2-digit',
@@ -23,7 +29,7 @@ export function buildProductionReceipt(pedido: Pedido): string {
 
   const lines: string[] = [
     '='.repeat(COL),
-    center('PRODUÇÃO'),
+    center('PRODUCAO'),
     pad(`Pedido #${pedido.id}`, time),
     SEP,
   ]
@@ -39,6 +45,9 @@ export function buildProductionReceipt(pedido: Pedido): string {
   lines.push(SEP)
   if (pedido.tipoentrega === 'entrega') lines.push(center('DELIVERY'))
   if (pedido.tipoentrega === 'local') lines.push(center('MESA'))
+  lines.push(`Pagamento: ${pgLabel[pedido.formapagamento] ?? pedido.formapagamento}`)
+  lines.push('')
+  lines.push('')
   lines.push('')
 
   return lines.join('\n')
@@ -77,12 +86,7 @@ export function buildDeliveryReceipt(pedido: Pedido): string {
   lines.push(pad('TOTAL:', fmt(pedido.total)))
   lines.push(SEP)
 
-  const pgMap: Record<string, string> = {
-    dinheiro: 'DINHEIRO',
-    cartao: 'CARTÃO',
-    pix: 'PIX',
-  }
-  lines.push(`Pagamento: ${pgMap[pedido.formapagamento] ?? pedido.formapagamento}`)
+  lines.push(`Pagamento: ${pgLabel[pedido.formapagamento] ?? pedido.formapagamento}`)
   if (pedido.troco && pedido.troco > 0) {
     const valorPago = pedido.troco + pedido.total
     lines.push(`Troco p/ R$${fmt(valorPago)}:${' '.repeat(4)}${fmt(pedido.troco)}`)
@@ -93,6 +97,8 @@ export function buildDeliveryReceipt(pedido: Pedido): string {
   if (pedido.phone) lines.push(`Tel: ${pedido.phone}`)
   if (pedido.endereco)
     lines.push(`End: ${pedido.endereco}, ${pedido.numero} - ${pedido.bairro}`)
+  lines.push('')
+  lines.push('')
   lines.push('')
 
   return lines.join('\n')

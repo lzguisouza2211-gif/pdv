@@ -6,15 +6,7 @@ const PRINTER_URL = 'http://localhost:3000/print'
 const MAX_RETRIES = 3
 const TIMEOUT_MS = 5_000
 
-export async function printJob(
-  pedido: Pedido,
-  tipo: 'producao' | 'motoboy'
-): Promise<void> {
-  const text =
-    tipo === 'producao'
-      ? buildProductionReceipt(pedido)
-      : buildDeliveryReceipt(pedido)
-
+async function sendPrint(text: string, tipo: string): Promise<void> {
   let attempt = 0
   while (attempt < MAX_RETRIES) {
     attempt++
@@ -36,4 +28,21 @@ export async function printJob(
       await new Promise((r) => setTimeout(r, delay))
     }
   }
+}
+
+export async function printJob(
+  pedido: Pedido,
+  tipo: 'producao' | 'motoboy' | 'ambos'
+): Promise<void> {
+  if (tipo === 'ambos') {
+    await sendPrint(buildProductionReceipt(pedido), 'producao')
+    await new Promise((r) => setTimeout(r, 500))
+    await sendPrint(buildDeliveryReceipt(pedido), 'motoboy')
+    return
+  }
+  const text =
+    tipo === 'producao'
+      ? buildProductionReceipt(pedido)
+      : buildDeliveryReceipt(pedido)
+  await sendPrint(text, tipo)
 }

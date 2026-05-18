@@ -5,27 +5,19 @@ import { enviarNotificacaoWpp } from '@/services/whatsapp.service'
 type PedidoPayload = Omit<Pedido, 'id' | 'created_at' | 'updated_at' | 'status'>
 
 export async function criarPedido(payload: PedidoPayload): Promise<void> {
-  const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), 15_000)
+  const { data, error } = await supabase
+    .from('pedidos')
+    .insert([{ ...payload, status: 'Recebido' }])
+    .select('id')
+    .single()
 
-  try {
-    const { data, error } = await supabase
-      .from('pedidos')
-      .insert([{ ...payload, status: 'Recebido' }])
-      .select('id')
-      .single()
-      .abortSignal(controller.signal)
+  if (error) throw error
 
-    if (error) throw error
-
-    const nome = payload.cliente.split(' ')[0]
-    const mensagem =
-      `Olá, ${nome}! 🎉 Seu pedido *#${data.id}* foi recebido com sucesso!\n\n` +
-      `Em breve começamos a preparar. Te avisamos aqui! 😊`
-    void enviarNotificacaoWpp(payload.phone, mensagem)
-  } finally {
-    clearTimeout(timeout)
-  }
+  const nome = payload.cliente.split(' ')[0]
+  const mensagem =
+    `Olá, ${nome}! 🎉 Seu pedido *#${data.id}* foi recebido com sucesso!\n\n` +
+    `Em breve começamos a preparar. Te avisamos aqui! 😊`
+  void enviarNotificacaoWpp(payload.phone, mensagem)
 }
 
 export async function fetchPedidosDoDia(): Promise<Pedido[]> {

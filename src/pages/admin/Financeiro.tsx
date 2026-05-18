@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { Pedido } from '@/types'
 import { fetchPedidos } from '@/services/api/pedidos.service'
 import { supabase } from '@/services/supabaseClient'
 import { useUser } from '@/store/useUser'

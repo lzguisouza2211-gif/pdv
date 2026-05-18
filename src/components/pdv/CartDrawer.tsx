@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { useCart, useCartSubtotal } from '@/store/useCart'
-import { TipoEntrega, FormaPagamento } from '@/types'
-import { normalizePedidoPayload } from '@/utils/pedido'
+import { TipoEntrega, FormaPagamento, CartItem, ExtraOption, ItemCardapio } from '@/types'
+import { normalizePedidoPayload, gerarCartKey } from '@/utils/pedido'
 import { validarTelefoneBrasileiro, formatarTelefone } from '@/utils/validation'
 import { formatBRL, calcTotal, calcTroco, calcItemPrice } from '@/utils/calc'
 import { criarPedido } from '@/services/api/pedidos.service'
@@ -11,7 +11,10 @@ import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Separator } from '@/components/ui/separator'
 import { PixKeyDisplay } from './PixKeyDisplay'
-import { X, Minus, Plus, ShoppingCart } from 'lucide-react'
+import { ProductCustomizationModal } from './ProductCustomizationModal'
+import { X, Minus, Plus, ShoppingCart, Pencil } from 'lucide-react'
+
+const CUSTOM_CATS = new Set(['Lanches', 'Macarrão', 'Omeletes'])
 
 interface Props {
   open: boolean
@@ -21,7 +24,8 @@ interface Props {
 }
 
 export function CartDrawer({ open, onClose, onSuccess, deliveryFee }: Props) {
-  const { items, remove, updateQty, clear } = useCart()
+  const { items, remove, removeAll, updateQty, add, clear } = useCart()
+  const [editingItem, setEditingItem] = useState<CartItem | null>(null)
   const subtotal = useCartSubtotal()
 
   const [cliente, setCliente] = useState('')
@@ -106,6 +110,38 @@ export function CartDrawer({ open, onClose, onSuccess, deliveryFee }: Props) {
     }
   }
 
+  function handleEditConfirm(extras: ExtraOption[], observacoes: string) {
+    if (!editingItem) return
+    const oldQty = editingItem.qty
+    removeAll(editingItem.cartKey)
+    const newCartKey = gerarCartKey(editingItem.id, extras, observacoes)
+    add({
+      cartKey: newCartKey,
+      id: editingItem.id,
+      name: editingItem.name,
+      price: editingItem.price,
+      qty: oldQty,
+      categoria: editingItem.categoria,
+      observacoes,
+      extras,
+    })
+    setEditingItem(null)
+  }
+
+  const editingAsCardapio: ItemCardapio | null = editingItem
+    ? {
+        id: editingItem.id,
+        nome: editingItem.name,
+        preco: editingItem.price,
+        categoria: editingItem.categoria ?? '',
+        ativo: true,
+        disponivel: true,
+        ingredientes: [],
+        ingredientes_indisponiveis: [],
+        proibeGratuidade: false,
+      }
+    : null
+
   if (!open) return null
 
   return (
@@ -161,6 +197,12 @@ export function CartDrawer({ open, onClose, onSuccess, deliveryFee }: Props) {
                       onClick={() => updateQty(item.cartKey, item.qty + 1)}>
                       <Plus className="h-4 w-4" />
                     </Button>
+                    {CUSTOM_CATS.has(item.categoria ?? '') && (
+                      <Button size="icon" variant="ghost" className="h-9 w-9 ml-auto"
+                        onClick={() => setEditingItem(item)}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -334,6 +376,16 @@ export function CartDrawer({ open, onClose, onSuccess, deliveryFee }: Props) {
         </div>
       </div>}
 
+      <ProductCustomizationModal
+        item={editingAsCardapio}
+        open={!!editingItem}
+        onClose={() => setEditingItem(null)}
+        onConfirm={handleEditConfirm}
+        initialSelectedAdd={new Set(editingItem?.extras.filter(e => e.tipo === 'add').map(e => e.nome))}
+        initialSelectedRem={new Set(editingItem?.extras.filter(e => e.tipo === 'remove').map(e => e.nome))}
+        initialObservacoes={editingItem?.observacoes ?? ''}
+        confirmLabel="Salvar alterações"
+      />
     </>
   )
 }
