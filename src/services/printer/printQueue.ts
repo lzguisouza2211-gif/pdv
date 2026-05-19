@@ -1,6 +1,7 @@
 import { Pedido } from '@/types'
 import { buildProductionReceipt } from './productionReceipt'
 import { buildDeliveryReceipt } from './deliveryReceipt'
+import { buildCombinedReceipt } from '@/utils/receiptLayout'
 
 const PRINTER_URL = 'http://localhost:3000/print'
 const MAX_RETRIES = 3
@@ -11,21 +12,32 @@ async function sendPrint(text: string, tipo: string): Promise<void> {
   while (attempt < MAX_RETRIES) {
     attempt++
     const delay = 200 * Math.pow(2, attempt - 1)
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS)
     try {
-      const controller = new AbortController()
-      const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS)
       const res = await fetch(PRINTER_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text, tipo }),
         signal: controller.signal,
       })
-      clearTimeout(timeout)
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      if (!res.ok) {
+        const body = await res.text()
+        let message = body || `HTTP ${res.status}`
+        try {
+          const parsed = JSON.parse(body)
+          if (parsed?.error) message = String(parsed.error)
+        } catch {
+          // Keep raw response text when response is not JSON.
+        }
+        throw new Error(message)
+      }
       return
     } catch (err) {
       if (attempt >= MAX_RETRIES) throw err
       await new Promise((r) => setTimeout(r, delay))
+    } finally {
+      clearTimeout(timeout)
     }
   }
 }
@@ -35,9 +47,7 @@ export async function printJob(
   tipo: 'producao' | 'motoboy' | 'ambos'
 ): Promise<void> {
   if (tipo === 'ambos') {
-    await sendPrint(buildProductionReceipt(pedido), 'producao')
-    await new Promise((r) => setTimeout(r, 500))
-    await sendPrint(buildDeliveryReceipt(pedido), 'motoboy')
+    await sendPrint(buildCombinedReceipt(pedido), 'ambos')
     return
   }
   const text =
