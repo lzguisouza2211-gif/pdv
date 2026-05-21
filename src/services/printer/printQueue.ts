@@ -35,13 +35,9 @@ export async function printJob(
   tipo: 'producao' | 'motoboy' | 'ambos'
 ): Promise<void> {
   if (tipo === 'ambos') {
-    const producaoText = buildProductionReceipt(pedido)
-    const motoboyText = buildDeliveryReceipt(pedido)
-    console.log('[PRINT DEBUG] producao:\n', producaoText)
-    console.log('[PRINT DEBUG] motoboy:\n', motoboyText)
-    await sendPrint(producaoText, 'producao')
+    await sendPrint(buildProductionReceipt(pedido), 'producao')
     await new Promise((r) => setTimeout(r, 500))
-    await sendPrint(motoboyText, 'motoboy')
+    await sendPrint(buildDeliveryReceipt(pedido), 'motoboy')
     return
   }
   const text =
