@@ -3,12 +3,11 @@ import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/compone
 import { CheckCircle, UserCheck, UserPlus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { Cliente, TipoEntrega } from '@/types'
+import { Cliente } from '@/types'
 import {
   criarCliente,
   registrarPedidoNoCliente,
   vincularClienteAoPedido,
-  atualizarEnderecoCliente,
   saveClienteSession,
 } from '@/services/api/clientes.service'
 
@@ -20,10 +19,6 @@ interface SuccessModalProps {
   phoneCliente: string
   totalPedido: number
   pedidoId: number | string
-  tipoentrega: TipoEntrega
-  endereco: string
-  numero: string
-  bairro: string
   onClose: () => void
 }
 
@@ -37,10 +32,6 @@ export function SuccessModal({
   phoneCliente,
   totalPedido,
   pedidoId,
-  tipoentrega,
-  endereco,
-  numero,
-  bairro,
   onClose,
 }: SuccessModalProps) {
   const [saveState, setSaveState] = useState<SaveState>('idle')
