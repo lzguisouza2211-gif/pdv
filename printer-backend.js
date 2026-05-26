@@ -56,17 +56,69 @@ async function printViaEscpos(text) {
 }
 
 async function printViaWindows(text) {
-  const tmp = join(tmpdir(), `receipt_${Date.now()}.txt`)
-  writeFileSync(tmp, text, 'latin1')
-  const printerArg = PRINTER_NAME ? `-Name "${PRINTER_NAME}"` : ''
+  const id     = Date.now()
+  const tmpBin = join(tmpdir(), `receipt_${id}.bin`)
+  const tmpPs  = join(tmpdir(), `receipt_${id}.ps1`)
+
+  // ESC @ = reset printer; GS V 0 = full cut
+  const init  = Buffer.from([0x1B, 0x40])
+  const feeds = Buffer.from([0x0A, 0x0A, 0x0A])
+  const cut   = Buffer.from([0x1D, 0x56, 0x00])
+  writeFileSync(tmpBin, Buffer.concat([init, Buffer.from(text, 'latin1'), feeds, cut]))
+
+  const binPath = tmpBin.replace(/\\/g, '\\\\')
+  const pName   = (PRINTER_NAME || 'Printer POS-80').replace(/"/g, '\\"')
+
+  // Raw print via Win32 WritePrinter — bypassa o GDI do Windows
+  const psScript = `Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+public class RawPrint {
+    [StructLayout(LayoutKind.Sequential, CharSet=CharSet.Ansi)]
+    public class DOCINFO {
+        [MarshalAs(UnmanagedType.LPStr)] public string pDocName;
+        [MarshalAs(UnmanagedType.LPStr)] public string pOutputFile;
+        [MarshalAs(UnmanagedType.LPStr)] public string pDataType;
+    }
+    [DllImport("winspool.Drv")] public static extern bool OpenPrinter(string n, out IntPtr h, IntPtr d);
+    [DllImport("winspool.Drv")] public static extern bool ClosePrinter(IntPtr h);
+    [DllImport("winspool.Drv")] public static extern bool StartDocPrinter(IntPtr h, int lv, [In, MarshalAs(UnmanagedType.LPStruct)] DOCINFO di);
+    [DllImport("winspool.Drv")] public static extern bool EndDocPrinter(IntPtr h);
+    [DllImport("winspool.Drv")] public static extern bool StartPagePrinter(IntPtr h);
+    [DllImport("winspool.Drv")] public static extern bool EndPagePrinter(IntPtr h);
+    [DllImport("winspool.Drv")] public static extern bool WritePrinter(IntPtr h, IntPtr p, int c, out int w);
+}
+'@
+$h = [IntPtr]::Zero
+[RawPrint]::OpenPrinter("${pName}", [ref]$h, [IntPtr]::Zero) | Out-Null
+$di = New-Object RawPrint+DOCINFO
+$di.pDocName = "receipt"
+$di.pDataType = "RAW"
+[RawPrint]::StartDocPrinter($h, 1, $di) | Out-Null
+[RawPrint]::StartPagePrinter($h) | Out-Null
+$bytes = [System.IO.File]::ReadAllBytes("${binPath}")
+$ptr = [System.Runtime.InteropServices.Marshal]::AllocHGlobal($bytes.Length)
+[System.Runtime.InteropServices.Marshal]::Copy($bytes, 0, $ptr, $bytes.Length)
+$w = 0
+[RawPrint]::WritePrinter($h, $ptr, $bytes.Length, [ref]$w) | Out-Null
+[System.Runtime.InteropServices.Marshal]::FreeHGlobal($ptr)
+[RawPrint]::EndPagePrinter($h) | Out-Null
+[RawPrint]::EndDocPrinter($h) | Out-Null
+[RawPrint]::ClosePrinter($h) | Out-Null`
+
+  writeFileSync(tmpPs, psScript, 'utf8')
+
   return new Promise((resolve, reject) => {
-    exec(
-      `powershell -Command "Get-Content -Encoding OEM '${tmp}' | Out-Printer ${printerArg}"`,
-      (err) => {
-        try { unlinkSync(tmp) } catch {}
-        err ? reject(err) : resolve()
+    exec(`powershell -ExecutionPolicy Bypass -File "${tmpPs}"`, (err, _out, stderr) => {
+      try { unlinkSync(tmpBin) } catch {}
+      try { unlinkSync(tmpPs)  } catch {}
+      if (err) {
+        console.error('[PRINT] PowerShell stderr:', stderr)
+        reject(err)
+      } else {
+        resolve()
       }
-    )
+    })
   })
 }
 
