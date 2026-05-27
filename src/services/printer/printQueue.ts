@@ -6,7 +6,14 @@ const PRINTER_URL = 'http://localhost:3000/print'
 const MAX_RETRIES = 3
 const TIMEOUT_MS = 5_000
 
-async function sendPrint(text: string, tipo: string): Promise<void> {
+async function sendPrint(text: string): Promise<void> {
+  // Electron: IPC direto — sem processo filho, sem HTTP
+  if (window.electronAPI?.isElectron) {
+    await window.electronAPI.printer.print(text)
+    return
+  }
+
+  // Web: HTTP para o printer-backend.js local (compatibilidade)
   let attempt = 0
   while (attempt < MAX_RETRIES) {
     attempt++
@@ -17,7 +24,7 @@ async function sendPrint(text: string, tipo: string): Promise<void> {
       const res = await fetch(PRINTER_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, tipo }),
+        body: JSON.stringify({ text }),
         signal: controller.signal,
       })
       clearTimeout(timeout)
@@ -35,14 +42,14 @@ export async function printJob(
   tipo: 'producao' | 'motoboy' | 'ambos'
 ): Promise<void> {
   if (tipo === 'ambos') {
-    await sendPrint(buildProductionReceipt(pedido), 'producao')
+    await sendPrint(buildProductionReceipt(pedido))
     await new Promise((r) => setTimeout(r, 500))
-    await sendPrint(buildDeliveryReceipt(pedido), 'motoboy')
+    await sendPrint(buildDeliveryReceipt(pedido))
     return
   }
   const text =
     tipo === 'producao'
       ? buildProductionReceipt(pedido)
       : buildDeliveryReceipt(pedido)
-  await sendPrint(text, tipo)
+  await sendPrint(text)
 }

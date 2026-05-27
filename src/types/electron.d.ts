@@ -50,6 +50,14 @@ declare global {
         onStatusChange: (cb: (status: StatusMap) => void) => () => void
       }
 
+      // ── Etapa 3: Impressora ─────────────────────────────────────────────────
+      printer: {
+        print: (text: string) => Promise<{ ok: boolean }>
+        getConfig: () => Promise<{ printerName: string; printerPath: string }>
+        setConfig: (patch: { printerName?: string; printerPath?: string }) => Promise<{ printerName: string; printerPath: string }>
+        listPrinters: () => Promise<Array<{ name: string; isDefault: boolean }>>
+      }
+
       // ── Etapa 2: WhatsApp ───────────────────────────────────────────────────
       whatsapp: {
         getStatus: () => Promise<WppStatus>

@@ -50,24 +50,10 @@ export class ProcessManager {
   // ─── Configuração dos backends ─────────────────────────────────────────────
 
   private getConfigs(): BackendConfig[] {
-    const root = this.projectRoot
-    const isPackaged = app.isPackaged
-
-    // Em dev, procura o tsx instalado localmente
-    return [
-      {
-        name: 'printer',
-        // Dev: node printer-backend.js | Prod: electron --node printer-backend.js
-        command: isPackaged ? process.execPath : 'node',
-        args: [join(root, 'printer-backend.js')],
-        cwd: root,
-        env: isPackaged ? { ELECTRON_RUN_AS_NODE: '1' } : {},
-        readySignal: 'Backend rodando',
-        readyTimeout: 5_000,
-      },
-      // WhatsApp (Baileys) foi migrado para dentro do processo Electron na Etapa 2.
-      // Não é mais spawned como processo filho. Ver main.ts e services/whatsapp/.
-    ]
+    // Etapa 2: WhatsApp migrado para dentro do Electron (services/whatsapp/)
+    // Etapa 3: Printer migrado para dentro do Electron (services/printer/)
+    // Nenhum processo filho necessário.
+    return []
   }
 
   // ─── API pública ───────────────────────────────────────────────────────────

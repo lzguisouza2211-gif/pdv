@@ -48,6 +48,22 @@ contextBridge.exposeInMainWorld('electronAPI', {
     },
   },
 
+  // ── Etapa 3: Impressora ────────────────────────────────────────────────────
+
+  printer: {
+    print: (text: string): Promise<{ ok: boolean }> =>
+      ipcRenderer.invoke('printer:print', text),
+
+    getConfig: (): Promise<{ printerName: string; printerPath: string }> =>
+      ipcRenderer.invoke('printer:get-config'),
+
+    setConfig: (patch: { printerName?: string; printerPath?: string }): Promise<{ printerName: string; printerPath: string }> =>
+      ipcRenderer.invoke('printer:set-config', patch),
+
+    listPrinters: (): Promise<Array<{ name: string; isDefault: boolean }>> =>
+      ipcRenderer.invoke('printer:list-printers'),
+  },
+
   // ── Etapa 2: WhatsApp ──────────────────────────────────────────────────────
 
   whatsapp: {

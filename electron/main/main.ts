@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url'
 import { ProcessManager } from './processManager.js'
 import { registerIpcHandlers } from './ipc/handlers.js'
 import { registerWhatsAppIpcHandlers } from './ipc/whatsapp.handlers.js'
+import { registerPrinterIpcHandlers } from './ipc/printer.handlers.js'
 
 import { getClient } from './services/whatsapp/BaileysClient.js'
 import { getService } from './services/whatsapp/WhatsAppService.js'
@@ -81,11 +82,8 @@ app.whenReady().then(async () => {
     console.error('[ELECTRON] Erro ao conectar WhatsApp:', err)
   )
 
-  // ── Apenas o printer backend é spawned (whatsapp rodando dentro do Electron) ─
-  await processManager.startAll()
-
-  // Aguarda o printer backend subir antes de abrir a janela
-  await new Promise<void>((r) => setTimeout(r, 1_500))
+  // ── Etapa 3: Printer — IPC direto, sem processo filho ──────────────────────
+  registerPrinterIpcHandlers()
 
   createWindow()
 
