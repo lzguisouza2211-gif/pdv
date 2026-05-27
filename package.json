@@ -3,11 +3,89 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
+  "main": "electron-dist/main/main.js",
+  "electronmon": {
+    "watch": ["electron-dist/"],
+    "ignore": ["src/", "dist/", "node_modules/", "backend/", "release/"]
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "printer": "node printer-backend.js"
+    "printer": "node printer-backend.js",
+    "electron:compile": "tsc -p tsconfig.electron.json",
+    "electron:dev": "npm run electron:compile && concurrently -k --names \"VITE,TSC,ELECTRON\" --prefix-colors \"cyan,yellow,green\" \"vite\" \"tsc -p tsconfig.electron.json -w --preserveWatchOutput\" \"wait-on tcp:5173 && electronmon .\"",
+    "electron:build": "ELECTRON=true vite build && tsc -p tsconfig.electron.json",
+    "electron:build:win": "cross-env ELECTRON=true vite build && tsc -p tsconfig.electron.json",
+    "electron:pack": "npm run electron:build && electron-builder",
+    "electron:pack:win": "npm run electron:build:win && electron-builder --win"
+  },
+  "build": {
+    "appId": "com.pdv.luizaolanches",
+    "productName": "PDV Luizão Lanches",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "electron-dist/**/*",
+      "dist/**/*",
+      "printer-backend.js",
+      "package.json",
+      "node_modules/**/*",
+      "!node_modules/**/{CHANGELOG.md,README.md,readme.md,test,__tests__,.github,*.map}",
+      "backend/dist/**/*",
+      "backend/package.json"
+    ],
+    "asarUnpack": [
+      "printer-backend.js",
+      "backend/dist/**/*",
+      "node_modules/@node-escpos/**/*",
+      "node_modules/serialport/**/*"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "public/icon.ico"
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "deb",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "public/icon.png",
+      "category": "Office"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "public/icon.ico",
+      "uninstallerIcon": "public/icon.ico",
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "PDV Luizão"
+    }
   },
   "dependencies": {
     "@radix-ui/react-checkbox": "^1.1.4",
@@ -39,13 +117,21 @@
     "zustand": "^5.0.4"
   },
   "devDependencies": {
+    "@types/node": "^22.19.19",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^4.4.1",
     "autoprefixer": "^10.4.21",
+    "concurrently": "^9.2.1",
+    "cross-env": "^7.0.3",
+    "electron": "^33.4.11",
+    "electron-builder": "^25.1.8",
+    "electronmon": "^2.0.4",
     "postcss": "^8.5.3",
     "tailwindcss": "^3.4.17",
+    "tsx": "^4.22.3",
     "typescript": "^5.7.3",
-    "vite": "^6.3.3"
+    "vite": "^6.3.3",
+    "wait-on": "^8.0.5"
   }
 }

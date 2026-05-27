@@ -5,7 +5,13 @@ import { fileURLToPath } from 'url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
+// Quando building para Electron (npm run electron:build), usa caminhos relativos
+// para que o index.html funcione via file:// dentro do Electron empacotado.
+// Na versão web (Vercel), mantém base '/' para funcionar com as rewrites.
+const isElectronBuild = process.env.ELECTRON === 'true'
+
 export default defineConfig({
+  base: isElectronBuild ? './' : '/',
   plugins: [react()],
   resolve: {
     alias: {
