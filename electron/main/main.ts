@@ -1,7 +1,8 @@
-import { app, BrowserWindow, shell } from 'electron'
+import { app, BrowserWindow, shell, dialog } from 'electron'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
 
+import { autoUpdater } from 'electron-updater'
 import { ProcessManager } from './processManager.js'
 import { registerIpcHandlers } from './ipc/handlers.js'
 import { registerWhatsAppIpcHandlers } from './ipc/whatsapp.handlers.js'
@@ -64,6 +65,30 @@ function createWindow(): void {
   })
 }
 
+function setupAutoUpdater(): void {
+  autoUpdater.autoDownload = true
+  autoUpdater.autoInstallOnAppQuit = true
+
+  autoUpdater.on('update-downloaded', () => {
+    const choice = dialog.showMessageBoxSync({
+      type: 'info',
+      title: 'Atualização disponível',
+      message: 'Uma nova versão do PDV foi baixada.',
+      detail: 'Deseja reiniciar agora para aplicar a atualização?',
+      buttons: ['Reiniciar agora', 'Mais tarde'],
+      defaultId: 0,
+    })
+    if (choice === 0) autoUpdater.quitAndInstall()
+  })
+
+  autoUpdater.on('error', (err) => {
+    console.error('[UPDATER] Erro ao verificar atualização:', err.message)
+  })
+
+  // Verifica após 5 s para não atrasar a abertura
+  setTimeout(() => autoUpdater.checkForUpdates(), 5_000)
+}
+
 app.whenReady().then(async () => {
   // ── IPC geral (status dos backends) ────────────────────────────────────────
   registerIpcHandlers(processManager)
@@ -86,6 +111,8 @@ app.whenReady().then(async () => {
   registerPrinterIpcHandlers()
 
   createWindow()
+
+  if (!isDev) setupAutoUpdater()
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
