@@ -11,7 +11,6 @@
 import { spawn, ChildProcess } from 'child_process'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
-import { existsSync } from 'fs'
 import { app } from 'electron'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -55,14 +54,6 @@ export class ProcessManager {
     const isPackaged = app.isPackaged
 
     // Em dev, procura o tsx instalado localmente
-    const tsxFromRoot    = join(root, 'node_modules', '.bin', 'tsx')
-    const tsxFromBackend = join(root, 'backend', 'node_modules', '.bin', 'tsx')
-    const tsxBin = existsSync(tsxFromRoot)
-      ? tsxFromRoot
-      : existsSync(tsxFromBackend)
-      ? tsxFromBackend
-      : 'tsx' // fallback para tsx global
-
     return [
       {
         name: 'printer',
@@ -74,18 +65,8 @@ export class ProcessManager {
         readySignal: 'Backend rodando',
         readyTimeout: 5_000,
       },
-      {
-        name: 'whatsapp',
-        // Dev: tsx backend/src/server.ts | Prod: electron --node backend/dist/server.js
-        command: isPackaged ? process.execPath : tsxBin,
-        args: isPackaged
-          ? [join(root, 'backend', 'dist', 'server.js')]
-          : [join(root, 'backend', 'src', 'server.ts')],
-        cwd: root,
-        env: isPackaged ? { ELECTRON_RUN_AS_NODE: '1' } : {},
-        readySignal: 'Servidor WhatsApp rodando',
-        readyTimeout: 8_000,
-      },
+      // WhatsApp (Baileys) foi migrado para dentro do processo Electron na Etapa 2.
+      // Não é mais spawned como processo filho. Ver main.ts e services/whatsapp/.
     ]
   }
 

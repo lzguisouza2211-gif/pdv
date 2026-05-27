@@ -1,12 +1,11 @@
 /**
  * Preload — ponte segura entre o processo renderer (React) e o main (Electron).
  *
- * Regras de segurança aplicadas:
- *   - contextIsolation: true  → renderer NÃO acessa Node.js diretamente
- *   - nodeIntegration: false  → sem require/fs/etc no renderer
- *   - Apenas métodos explícitos são expostos via contextBridge
+ * Etapa 1: backends (status dos processos filhos)
+ * Etapa 2: whatsapp (QR code, status, envio, conexão)
  *
- * API disponível no renderer como: window.electronAPI
+ * window.electronAPI só existe quando o app roda dentro do Electron.
+ * Na versão web (Vercel) a propriedade é undefined.
  */
 
 import { contextBridge, ipcRenderer } from 'electron'
@@ -14,37 +13,97 @@ import type { IpcRendererEvent } from 'electron'
 
 type BackendStatus = 'starting' | 'running' | 'stopped' | 'error'
 type StatusMap = Record<string, BackendStatus>
-type StatusListener = (status: StatusMap) => void
+
+type WppConnectionState = 'connecting' | 'connected' | 'disconnected' | 'qr_ready'
+
+interface WppStatus {
+  connected: boolean
+  state: WppConnectionState
+  qrCode: string | null
+  uptime: number | null
+}
 
 contextBridge.exposeInMainWorld('electronAPI', {
-  /** Informações de versão do runtime */
+  isElectron: true,
+
   versions: {
     node: process.versions.node,
     chrome: process.versions.chrome,
     electron: process.versions.electron,
   },
 
-  /** Indica que o app está rodando dentro do Electron */
-  isElectron: true,
+  // ── Etapa 1: status dos processos backend ──────────────────────────────────
 
-  /** Gerenciamento dos processos backend */
   backends: {
-    /** Retorna o status atual de todos os backends */
     getStatus: (): Promise<StatusMap> =>
       ipcRenderer.invoke('backend:status'),
 
-    /** Reinicia um backend pelo nome ('printer' | 'whatsapp') */
     restart: (name: string): Promise<StatusMap> =>
       ipcRenderer.invoke('backend:restart', name),
 
-    /**
-     * Escuta mudanças de status dos backends.
-     * Retorna uma função para cancelar a assinatura (cleanup).
-     */
-    onStatusChange: (cb: StatusListener): (() => void) => {
+    onStatusChange: (cb: (status: StatusMap) => void): (() => void) => {
       const handler = (_: IpcRendererEvent, s: StatusMap) => cb(s)
       ipcRenderer.on('backend:status-changed', handler)
       return () => ipcRenderer.removeListener('backend:status-changed', handler)
+    },
+  },
+
+  // ── Etapa 2: WhatsApp ──────────────────────────────────────────────────────
+
+  whatsapp: {
+    getStatus: (): Promise<WppStatus> =>
+      ipcRenderer.invoke('whatsapp:status'),
+
+    send: (payload: { phone: string; message: string }): Promise<{ ok: boolean }> =>
+      ipcRenderer.invoke('whatsapp:send', payload),
+
+    notifyOrder: (payload: {
+      phone: string
+      customerName: string
+      orderId: string
+      status: string
+      estimatedTime?: number
+      total?: number
+    }): Promise<{ ok: boolean }> =>
+      ipcRenderer.invoke('whatsapp:notify-order', payload),
+
+    disconnect: (): Promise<{ ok: boolean }> =>
+      ipcRenderer.invoke('whatsapp:disconnect'),
+
+    reconnect: (): Promise<{ ok: boolean }> =>
+      ipcRenderer.invoke('whatsapp:reconnect'),
+
+    /** Recebe o QR Code como data URL (PNG base64) pronto para <img src="..."> */
+    onQr: (cb: (qrDataUrl: string | null) => void): (() => void) => {
+      const handler = (_: IpcRendererEvent, d: { qrDataUrl: string | null }) =>
+        cb(d.qrDataUrl)
+      ipcRenderer.on('whatsapp:qr', handler)
+      return () => ipcRenderer.removeListener('whatsapp:qr', handler)
+    },
+
+    onConnected: (cb: () => void): (() => void) => {
+      const handler = () => cb()
+      ipcRenderer.on('whatsapp:connected', handler)
+      return () => ipcRenderer.removeListener('whatsapp:connected', handler)
+    },
+
+    onDisconnected: (cb: (data: { statusCode: number; reason: string }) => void): (() => void) => {
+      const handler = (_: IpcRendererEvent, d: { statusCode: number; reason: string }) =>
+        cb(d)
+      ipcRenderer.on('whatsapp:disconnected', handler)
+      return () => ipcRenderer.removeListener('whatsapp:disconnected', handler)
+    },
+
+    onLogout: (cb: () => void): (() => void) => {
+      const handler = () => cb()
+      ipcRenderer.on('whatsapp:logout', handler)
+      return () => ipcRenderer.removeListener('whatsapp:logout', handler)
+    },
+
+    onStatusChange: (cb: (status: WppStatus) => void): (() => void) => {
+      const handler = (_: IpcRendererEvent, s: WppStatus) => cb(s)
+      ipcRenderer.on('whatsapp:status-changed', handler)
+      return () => ipcRenderer.removeListener('whatsapp:status-changed', handler)
     },
   },
 })

@@ -10,9 +10,10 @@ import { Pedidos } from '@/pages/admin/Pedidos'
 import { Financeiro } from '@/pages/admin/Financeiro'
 import { NovoPedido } from '@/pages/admin/NovoPedido'
 import { Clientes } from '@/pages/admin/Clientes'
+import { WhatsApp } from '@/pages/admin/WhatsApp'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
-import { LogOut, Users } from 'lucide-react'
+import { LogOut, Users, MessageCircle } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useCaixaAutomatico } from '@/hooks/useCaixaAutomatico'
 
@@ -45,7 +46,7 @@ function AdminLayout({ children }: { children: React.ReactNode }) {
             value={tabValue}
             onValueChange={(v) => navigate(`/admin/${v === 'dashboard' ? '' : v}`)}
           >
-            <TabsList className="w-full grid grid-cols-6 mb-2">
+            <TabsList className="w-full grid grid-cols-7 mb-2">
               <TabsTrigger value="dashboard" className="text-xs sm:text-sm">Dashboard</TabsTrigger>
               <TabsTrigger value="cardapio" className="text-xs sm:text-sm">Cardápio</TabsTrigger>
               <TabsTrigger value="pedidos" className="text-xs sm:text-sm">Pedidos</TabsTrigger>
@@ -54,6 +55,10 @@ function AdminLayout({ children }: { children: React.ReactNode }) {
               <TabsTrigger value="clientes" className="text-xs sm:text-sm flex items-center gap-1">
                 <Users className="h-3.5 w-3.5" />
                 Clientes
+              </TabsTrigger>
+              <TabsTrigger value="whatsapp" className="text-xs sm:text-sm flex items-center gap-1">
+                <MessageCircle className="h-3.5 w-3.5" />
+                WhatsApp
               </TabsTrigger>
             </TabsList>
           </Tabs>
@@ -149,6 +154,16 @@ export function AppRoutes() {
           <ProtectedRoute>
             <AdminLayout>
               <Clientes />
+            </AdminLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/whatsapp"
+        element={
+          <ProtectedRoute>
+            <AdminLayout>
+              <WhatsApp />
             </AdminLayout>
           </ProtectedRoute>
         }
