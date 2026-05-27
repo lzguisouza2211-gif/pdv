@@ -1,6 +1,6 @@
 import type { OrderStatus } from './whatsapp.types'
 
-// Backend Baileys (porta 3001). Separado do printer-backend (porta 3000).
+// Fallback HTTP para versão web (Vercel). No Electron, usa IPC direto.
 const WPP_URL = (import.meta.env.VITE_WPP_URL ?? 'http://localhost:3001').replace(/\/$/, '')
 
 function normalizePhone(phone: string): string {
@@ -19,12 +19,17 @@ export async function enviarNotificacaoWpp(
   message: string
 ): Promise<void> {
   if (!phone || !isValidPhone(phone)) return
+  const normalized = normalizePhone(phone)
 
   try {
+    if (window.electronAPI?.isElectron) {
+      await window.electronAPI.whatsapp.send({ phone: normalized, message })
+      return
+    }
     await fetch(`${WPP_URL}/whatsapp/send`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone: normalizePhone(phone), message }),
+      body: JSON.stringify({ phone: normalized, message }),
     })
   } catch {
     // Notificação é best-effort — nunca bloqueia o fluxo do pedido
@@ -42,12 +47,17 @@ export async function notificarStatusPedido(params: {
 }): Promise<void> {
   const { phone, ...rest } = params
   if (!phone || !isValidPhone(phone)) return
+  const normalized = normalizePhone(phone)
 
   try {
+    if (window.electronAPI?.isElectron) {
+      await window.electronAPI.whatsapp.notifyOrder({ phone: normalized, ...rest })
+      return
+    }
     await fetch(`${WPP_URL}/whatsapp/notify-order`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone: normalizePhone(phone), ...rest }),
+      body: JSON.stringify({ phone: normalized, ...rest }),
     })
   } catch {
     // best-effort
