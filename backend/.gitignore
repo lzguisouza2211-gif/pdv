@@ -1,0 +1,6 @@
+node_modules/
+dist/
+.env
+
+# Sessão do WhatsApp — contém credenciais, nunca commite!
+auth_info_baileys/
