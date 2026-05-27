@@ -52,19 +52,23 @@ export class BaileysClient extends EventEmitter {
   private socket: WASocket | null = null
   private state: ConnectionState = 'disconnected'
   private retryCount = 0
+  private retryTimer: ReturnType<typeof setTimeout> | null = null
   private connectedAt: number | null = null
   private currentQR: string | null = null
+  private _intentionalClose = false
 
   // ─── Conexão ─────────────────────────────────────────────────────────────
 
   async connect(): Promise<void> {
+    // Fecha socket anterior antes de criar um novo — evita listeners duplicados
+    this.closeSocket()
+
     this.state = 'connecting'
     const authDir = getAuthDir()
     const { state, saveCreds } = await useMultiFileAuthState(authDir)
     const { version } = await fetchLatestBaileysVersion()
 
     console.log(`[WPP] Iniciando conexão (Baileys ${version.join('.')})…`)
-    console.log(`[WPP] Sessão em: ${authDir}`)
 
     this.socket = makeWASocket({
       version,
@@ -78,10 +82,27 @@ export class BaileysClient extends EventEmitter {
       syncFullHistory: false,
       markOnlineOnConnect: false,
       generateHighQualityLinkPreview: false,
+      keepAliveIntervalMs: 30_000,
     })
 
     this.socket.ev.on('creds.update', saveCreds)
     this.socket.ev.on('connection.update', (u) => this.onConnectionUpdate(u))
+  }
+
+  private closeSocket(): void {
+    if (!this.socket) return
+    this._intentionalClose = true
+    try {
+      this.socket.end(new Error('manual close'))
+    } catch {}
+    this.socket = null
+  }
+
+  private cancelRetry(): void {
+    if (this.retryTimer) {
+      clearTimeout(this.retryTimer)
+      this.retryTimer = null
+    }
   }
 
   // ─── Tratamento de eventos ────────────────────────────────────────────────
@@ -93,7 +114,6 @@ export class BaileysClient extends EventEmitter {
       this.currentQR = qr
       this.state = 'qr_ready'
       console.log('[WPP] QR Code gerado — exibindo na interface do PDV')
-      // Emite a string bruta do QR; o handler IPC converte para base64 PNG
       this.emit('qr', qr)
     }
 
@@ -107,6 +127,11 @@ export class BaileysClient extends EventEmitter {
     }
 
     if (connection === 'close') {
+      if (this._intentionalClose) {
+        this._intentionalClose = false
+        return
+      }
+
       this.state = 'disconnected'
       this.connectedAt = null
 
@@ -125,10 +150,11 @@ export class BaileysClient extends EventEmitter {
 
       if (this.retryCount < MAX_RETRIES) {
         this.retryCount++
+        const delay = RETRY_DELAY_MS * this.retryCount // backoff progressivo
         console.log(
-          `[WPP] Reconectando em ${RETRY_DELAY_MS / 1000}s… (${this.retryCount}/${MAX_RETRIES})`
+          `[WPP] Reconectando em ${delay / 1000}s… (${this.retryCount}/${MAX_RETRIES})`
         )
-        setTimeout(() => this.connect(), RETRY_DELAY_MS)
+        this.retryTimer = setTimeout(() => this.connect(), delay)
       } else {
         console.error('[WPP] Máximo de tentativas atingido. Use o painel para reconectar.')
         this.emit('max_retries')
@@ -159,20 +185,20 @@ export class BaileysClient extends EventEmitter {
   }
 
   async disconnect(): Promise<void> {
+    this.cancelRetry()
+    this.retryCount = MAX_RETRIES // impede auto-reconexão após desconexão manual
     try {
       await this.socket?.logout()
-    } catch {
-      // logout pode falhar se já desconectado
-    }
-    this.socket = null
+    } catch {}
+    this.closeSocket()
     this.state = 'disconnected'
     this.currentQR = null
     this.connectedAt = null
-    this.retryCount = MAX_RETRIES // impede auto-reconexão após logout manual
     this.emit('disconnected', { statusCode: 0, reason: 'manual' })
   }
 
   async reconnect(): Promise<void> {
+    this.cancelRetry()
     this.retryCount = 0
     await this.connect()
   }

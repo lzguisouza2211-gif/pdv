@@ -2,7 +2,8 @@ import { app, BrowserWindow, shell, dialog } from 'electron'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
 
-import { autoUpdater } from 'electron-updater'
+import pkg from 'electron-updater'
+const { autoUpdater } = pkg
 import { ProcessManager } from './processManager.js'
 import { registerIpcHandlers } from './ipc/handlers.js'
 import { registerWhatsAppIpcHandlers } from './ipc/whatsapp.handlers.js'
