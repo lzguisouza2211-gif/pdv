@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label'
 import { ChevronDown } from 'lucide-react'
 import { fetchDeliveryFee, updateDeliveryFee } from '@/services/api/deliveryFee.service'
 import { formatBRL } from '@/utils/calc'
+import { toast } from '@/hooks/use-toast'
 
 export function GestaoCardapio() {
   const [taxaEntrega, setTaxaEntrega] = useState<number>(5)
@@ -27,8 +28,10 @@ export function GestaoCardapio() {
       await updateDeliveryFee(val)
       setTaxaEntrega(val)
       setTaxaEdit('')
-    } catch (err) {
-      console.error(err)
+      toast({ title: 'Taxa de entrega atualizada!' })
+    } catch (err: unknown) {
+      const e = err as { message?: string }
+      toast({ title: 'Erro ao salvar taxa', description: e?.message, variant: 'destructive' })
     } finally {
       setSavingTaxa(false)
     }
@@ -59,15 +62,6 @@ export function GestaoCardapio() {
       </Card>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Disponibilidade e Preços</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <QuickMenuManagement />
-        </CardContent>
-      </Card>
-
-      <Card>
         <CardHeader
           className="cursor-pointer select-none"
           onClick={() => setIngredientesOpen((o) => !o)}
@@ -84,6 +78,15 @@ export function GestaoCardapio() {
             <IngredientesIndisponiveisPanel />
           </CardContent>
         )}
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Disponibilidade e Preços</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <QuickMenuManagement />
+        </CardContent>
       </Card>
     </div>
   )

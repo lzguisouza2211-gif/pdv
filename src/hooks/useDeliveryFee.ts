@@ -20,7 +20,7 @@ export function useDeliveryFee() {
   useEffect(() => {
     load()
 
-    const interval = setInterval(load, 30_000)
+    const interval = setInterval(load, 10_000)
 
     const channel = supabase
       .channel('delivery-config-watch')

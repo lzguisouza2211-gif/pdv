@@ -15,16 +15,14 @@ export async function fetchStoreStatus(): Promise<StoreStatus> {
 export async function updateStoreOpen(is_open: boolean): Promise<void> {
   const { error } = await supabase
     .from('store_status')
-    .update({ is_open })
-    .eq('id', 1)
+    .upsert({ id: 1, is_open }, { onConflict: 'id' })
   if (error) throw error
 }
 
 export async function updateTempoEspera(tempo_espera_padrao: number): Promise<void> {
   const { error } = await supabase
     .from('store_status')
-    .update({ tempo_espera_padrao })
-    .eq('id', 1)
+    .upsert({ id: 1, tempo_espera_padrao }, { onConflict: 'id' })
   if (error) throw error
 }
 
@@ -53,11 +51,11 @@ export async function updatePixConfig(config: {
 }): Promise<void> {
   const { error } = await supabase
     .from('store_status')
-    .update({
+    .upsert({
+      id: 1,
       pix_key: config.key,
       pix_display_key: config.displayKey,
       pix_recipient_name: config.recipientName,
-    })
-    .eq('id', 1)
+    }, { onConflict: 'id' })
   if (error) throw error
 }

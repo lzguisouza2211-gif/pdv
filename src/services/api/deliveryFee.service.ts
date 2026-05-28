@@ -14,7 +14,6 @@ export async function fetchDeliveryFee(): Promise<number> {
 export async function updateDeliveryFee(taxa_entrega: number): Promise<void> {
   const { error } = await supabase
     .from('delivery_config')
-    .update({ taxa_entrega, updated_at: new Date().toISOString() })
-    .eq('id', 1)
+    .upsert({ id: 1, taxa_entrega, updated_at: new Date().toISOString() }, { onConflict: 'id' })
   if (error) throw error
 }
