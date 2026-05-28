@@ -7,3 +7,6 @@ release
 .env.*.local
 *.log
 .DS_Store
+# Credenciais geradas — nunca commitar
+electron/main/credentials.ts
+electron/main/credentials.js

@@ -47,13 +47,21 @@ function createWindow(): void {
   })
 
   if (isDev) {
-    // HashRouter usa /#/admin — o Vite serve qualquer caminho normalmente
     mainWindow.loadURL('http://localhost:5173/#/admin')
     mainWindow.webContents.openDevTools({ mode: 'detach' })
   } else {
-    // Produção: file:// + HashRouter funciona sem servidor (sem rewrites)
-    mainWindow.loadFile(join(__dirname, '../../dist/index.html'), {
-      hash: '/admin',
+    mainWindow.loadFile(join(__dirname, '../../dist/index.html'), { hash: '/admin' })
+
+    // Bloqueia DevTools em produção — F12, Ctrl+Shift+I, Ctrl+U
+    mainWindow.webContents.on('before-input-event', (event, input) => {
+      const ctrl = input.control || input.meta
+      if (
+        input.key === 'F12' ||
+        (ctrl && input.shift && (input.key === 'I' || input.key === 'J')) ||
+        (ctrl && input.key === 'U')
+      ) {
+        event.preventDefault()
+      }
     })
   }
 

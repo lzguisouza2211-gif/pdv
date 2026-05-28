@@ -15,7 +15,13 @@ export function Login() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  async function handleLogin(e: React.FormEvent) {
+  function isNetworkError(err: unknown): boolean {
+    if (!navigator.onLine) return true
+    const msg = ((err as { message?: string })?.message ?? '').toLowerCase()
+    return msg.includes('failed to fetch') || msg.includes('networkerror') || msg.includes('fetch')
+  }
+
+  async function handleLogin(e: { preventDefault(): void }) {
     e.preventDefault()
     setError('')
     setLoading(true)
@@ -25,7 +31,11 @@ export function Login() {
       setUser(data.user)
       navigate('/admin')
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Erro ao entrar')
+      if (isNetworkError(err)) {
+        setError('Sem conexão com a internet. Verifique sua rede e tente novamente.')
+      } else {
+        setError(err instanceof Error ? err.message : 'Erro ao entrar')
+      }
     } finally {
       setLoading(false)
     }

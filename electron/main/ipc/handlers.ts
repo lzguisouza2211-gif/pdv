@@ -1,11 +1,13 @@
 import { ipcMain, BrowserWindow } from 'electron'
 import type { ProcessManager } from '../processManager.js'
+import { SUPABASE_URL, SUPABASE_KEY } from '../credentials.js'
 
-/**
- * Etapa 1: handlers básicos de status dos backends.
- * Etapas 2-3 adicionarão handlers de WhatsApp e Impressão.
- */
 export function registerIpcHandlers(pm: ProcessManager): void {
+  // Credenciais do Supabase — entregues ao renderer via preload (fora do bundle Vite)
+  ipcMain.on('config:get-supabase', (event) => {
+    event.returnValue = { url: SUPABASE_URL, key: SUPABASE_KEY }
+  })
+
   // Retorna o status atual de todos os backends
   ipcMain.handle('backend:status', () => pm.getStatuses())
 

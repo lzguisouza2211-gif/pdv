@@ -11,6 +11,14 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import type { IpcRendererEvent } from 'electron'
 
+// Obtém credenciais do processo main antes do renderer iniciar.
+// Isso garante que NUNCA estarão no bundle Vite (dist/).
+const supabaseConfig = ipcRenderer.sendSync('config:get-supabase') as {
+  url: string
+  key: string
+}
+contextBridge.exposeInMainWorld('__APP_CONFIG__', supabaseConfig)
+
 type BackendStatus = 'starting' | 'running' | 'stopped' | 'error'
 type StatusMap = Record<string, BackendStatus>
 

@@ -23,11 +23,11 @@
     "printer": "node printer-backend.js",
     "electron:compile": "tsc -p tsconfig.electron.json && tsc -p tsconfig.preload.json && node scripts/postbuild-electron.mjs",
     "electron:dev": "npm run electron:compile && concurrently -k --names \"VITE,TSC,PRE,ELECTRON\" --prefix-colors \"cyan,yellow,magenta,green\" \"vite\" \"tsc -p tsconfig.electron.json -w --preserveWatchOutput\" \"tsc -p tsconfig.preload.json -w --preserveWatchOutput\" \"wait-on tcp:5173 && electronmon .\"",
-    "electron:build": "ELECTRON=true vite build && tsc -p tsconfig.electron.json && tsc -p tsconfig.preload.json && node scripts/postbuild-electron.mjs",
-    "electron:build:win": "cross-env ELECTRON=true vite build && tsc -p tsconfig.electron.json && tsc -p tsconfig.preload.json && node scripts/postbuild-electron.mjs",
+    "electron:build": "node scripts/generate-credentials.mjs && ELECTRON=true vite build && tsc -p tsconfig.electron.json && tsc -p tsconfig.preload.json && node scripts/postbuild-electron.mjs",
+    "electron:build:win": "node scripts/generate-credentials.mjs && cross-env ELECTRON=true vite build && tsc -p tsconfig.electron.json && tsc -p tsconfig.preload.json && node scripts/postbuild-electron.mjs",
     "electron:pack": "npm run electron:build && electron-builder",
     "electron:pack:win": "npm run electron:build:win && electron-builder --win",
-    "electron:publish": "export GH_TOKEN=$(grep GH_TOKEN .env | cut -d '=' -f2) && npm run electron:build:win && electron-builder --win --publish always"
+    "electron:publish": "node scripts/generate-credentials.mjs && export GH_TOKEN=$(grep GH_TOKEN .env | cut -d '=' -f2) && cross-env ELECTRON=true vite build && tsc -p tsconfig.electron.json && tsc -p tsconfig.preload.json && node scripts/postbuild-electron.mjs && electron-builder --win --publish always"
   },
   "build": {
     "appId": "com.pdv.luizaolanches",

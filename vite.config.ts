@@ -21,4 +21,11 @@ export default defineConfig({
   server: {
     host: true,
   },
+  // No build Electron, as credenciais chegam via IPC (preload) — zeramos as VITE_ vars
+  // para que não apareçam no bundle dist/ inspecionável.
+  define: isElectronBuild ? {
+    'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(''),
+    'import.meta.env.VITE_SUPABASE_ANON_KEY': JSON.stringify(''),
+    'import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY': JSON.stringify(''),
+  } : {},
 })

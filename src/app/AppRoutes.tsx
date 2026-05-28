@@ -93,11 +93,24 @@ export function AppRoutes() {
       setChecking(false)
     })
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+      // Ignora SIGNED_OUT causado por falha de rede (troca de WiFi, queda momentânea)
+      if (event === 'SIGNED_OUT' && !navigator.onLine) return
       setUser(session?.user ?? null)
     })
 
-    return () => listener.subscription.unsubscribe()
+    // Quando a internet voltar, tenta restaurar a sessão que pode ter sido perdida
+    function handleOnline() {
+      supabase.auth.getSession().then(({ data }) => {
+        if (data.session?.user) setUser(data.session.user)
+      })
+    }
+    window.addEventListener('online', handleOnline)
+
+    return () => {
+      listener.subscription.unsubscribe()
+      window.removeEventListener('online', handleOnline)
+    }
   }, [setUser])
 
   if (checking) return null
