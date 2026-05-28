@@ -56,7 +56,7 @@ Sempre incrementar antes de publicar. Seguir o padrão:
 
 ```bash
 git checkout main
-git merge wpp-api
+git merge (branch-atual se tiver)
 git push origin main
 ```
 
