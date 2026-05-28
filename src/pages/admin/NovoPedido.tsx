@@ -37,13 +37,19 @@ function calcLineTotal(line: CartLine) {
   return (line.item.preco + extras) * line.qty
 }
 
-export function NovoPedido() {
+interface NovoPedidoProps {
+  defaultCliente?: string
+  lockTipoEntrega?: TipoEntrega
+  onSuccess?: () => void
+}
+
+export function NovoPedido({ defaultCliente, lockTipoEntrega, onSuccess }: NovoPedidoProps = {}) {
   const { itens, loading } = useCardapio()
   const { toast } = useToast()
 
   const [cart, setCart] = useState<CartLine[]>([])
-  const [cliente, setCliente] = useState('')
-  const [tipoEntrega, setTipoEntrega] = useState<TipoEntrega>('local')
+  const [cliente, setCliente] = useState(defaultCliente ?? '')
+  const [tipoEntrega, setTipoEntrega] = useState<TipoEntrega>(lockTipoEntrega ?? 'local')
   const [enviando, setEnviando] = useState(false)
   const [busca, setBusca] = useState('')
   const [cartOpen, setCartOpen] = useState(false)
@@ -140,8 +146,9 @@ export function NovoPedido() {
 
       toast({ title: 'Pedido criado!', description: `${formatBRL(total)} · ${totalItens} item(s)` })
       setCart([])
-      setCliente('')
+      setCliente(defaultCliente ?? '')
       setCartOpen(false)
+      onSuccess?.()
     } catch (err) {
       console.error(err)
       toast({ title: 'Erro ao criar pedido', variant: 'destructive' })
@@ -236,26 +243,28 @@ export function NovoPedido() {
           />
         </div>
 
-        <div>
-          <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1.5 block">
-            Tipo
-          </Label>
-          <div className="grid grid-cols-2 gap-2">
-            {TIPOS.map(t => (
-              <button
-                key={t.value}
-                onClick={() => setTipoEntrega(t.value)}
-                className={`py-2.5 rounded-lg border font-medium text-sm transition-colors ${
-                  tipoEntrega === t.value
-                    ? 'bg-primary text-primary-foreground border-primary'
-                    : 'hover:bg-muted'
-                }`}
-              >
-                {t.label}
-              </button>
-            ))}
+        {!lockTipoEntrega && (
+          <div>
+            <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1.5 block">
+              Tipo
+            </Label>
+            <div className="grid grid-cols-2 gap-2">
+              {TIPOS.map(t => (
+                <button
+                  key={t.value}
+                  onClick={() => setTipoEntrega(t.value)}
+                  className={`py-2.5 rounded-lg border font-medium text-sm transition-colors ${
+                    tipoEntrega === t.value
+                      ? 'bg-primary text-primary-foreground border-primary'
+                      : 'hover:bg-muted'
+                  }`}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       <Button

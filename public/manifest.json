@@ -1,0 +1,18 @@
+{
+  "name": "Luizão Lanches — Garçom",
+  "short_name": "Luizão",
+  "description": "Lançar pedidos de mesa",
+  "start_url": "/garcom",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "icons": [
+    {
+      "src": "/icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/services/supabaseClient'
 import { useUser } from '@/store/useUser'
 import { Cardapio } from '@/pages/pdv/Cardapio'
+import { GarcomPage } from '@/pages/garcom/GarcomPage'
 import { Login } from '@/pages/auth/Login'
 import { Dashboard } from '@/pages/admin/Dashboard'
 import { GestaoCardapio } from '@/pages/admin/GestaoCardapio'
@@ -183,6 +184,7 @@ export function AppRoutes() {
           </ProtectedRoute>
         }
       />
+      <Route path="/garcom" element={<GarcomPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
