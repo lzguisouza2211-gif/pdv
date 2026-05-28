@@ -455,7 +455,9 @@ export function CartDrawer({ open, onClose, onSuccess, deliveryFee }: Props) {
         open={!!editingItem}
         onClose={() => setEditingItem(null)}
         onConfirm={handleEditConfirm}
-        initialSelectedAdd={new Set(editingItem?.extras.filter(e => e.tipo === 'add').map(e => e.nome))}
+        initialAddQtys={Object.fromEntries(
+          editingItem?.extras.filter(e => e.tipo === 'add').map(e => [e.nome, e.qty ?? 1]) ?? []
+        )}
         initialSelectedRem={new Set(editingItem?.extras.filter(e => e.tipo === 'remove').map(e => e.nome))}
         initialObservacoes={editingItem?.observacoes ?? ''}
         confirmLabel="Salvar alterações"

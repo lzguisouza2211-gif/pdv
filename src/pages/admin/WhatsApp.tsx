@@ -25,7 +25,7 @@ function StatusBadge({ state }: { state: string }) {
 }
 
 export function WhatsApp() {
-  const { connected, state, qrDataUrl, uptime, loading, error, disconnect, reconnect } =
+  const { connected, state, qrDataUrl, uptime, loading, error, disconnect, reconnect, clearSession } =
     useWhatsApp()
 
   // Página só faz sentido dentro do Electron
@@ -87,16 +87,28 @@ export function WhatsApp() {
                 Desconectar
               </Button>
             ) : (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={reconnect}
-                disabled={loading || state === 'connecting'}
-                className="w-full"
-              >
-                <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-                {state === 'connecting' ? 'Conectando…' : 'Reconectar'}
-              </Button>
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={reconnect}
+                  disabled={loading || state === 'connecting'}
+                  className="flex-1"
+                >
+                  <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                  {state === 'connecting' ? 'Conectando…' : 'Reconectar'}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={clearSession}
+                  disabled={loading}
+                  title="Apaga a sessão atual e gera um novo QR Code"
+                  className="flex-1"
+                >
+                  Gerar novo QR
+                </Button>
+              </>
             )}
           </div>
         </CardContent>

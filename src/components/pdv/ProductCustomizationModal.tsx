@@ -13,15 +13,17 @@ import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { Badge } from '@/components/ui/badge'
 import { formatBRL } from '@/utils/calc'
-import { ChevronDown } from 'lucide-react'
+import { ChevronDown, Plus, Minus } from 'lucide-react'
 import { fetchAdicionaisByProduct, fetchRetiradosByProduct } from '@/services/api/cardapio.service'
+
+const MAX_QTY = 5
 
 interface Props {
   item: ItemCardapio | null
   open: boolean
   onClose: () => void
   onConfirm: (extras: ExtraOption[], observacoes: string) => void
-  initialSelectedAdd?: Set<string>
+  initialAddQtys?: Record<string, number>   // nome → qty (para edição)
   initialSelectedRem?: Set<string>
   initialObservacoes?: string
   confirmLabel?: string
@@ -64,10 +66,13 @@ function DropdownSection({ title, badgeCount, isOpen, onToggle, children }: Drop
   )
 }
 
-export function ProductCustomizationModal({ item, open, onClose, onConfirm, initialSelectedAdd, initialSelectedRem, initialObservacoes, confirmLabel }: Props) {
+export function ProductCustomizationModal({
+  item, open, onClose, onConfirm,
+  initialAddQtys, initialSelectedRem, initialObservacoes, confirmLabel,
+}: Props) {
   const [adicionais, setAdicionais] = useState<Adicional[]>([])
   const [retiradas, setRetiradas] = useState<string[]>([])
-  const [selectedAdd, setSelectedAdd] = useState<Set<string>>(new Set())
+  const [addQtys, setAddQtys] = useState<Record<string, number>>({})
   const [selectedRem, setSelectedRem] = useState<Set<string>>(new Set())
   const [observacoes, setObservacoes] = useState('')
   const [loading, setLoading] = useState(false)
@@ -76,7 +81,7 @@ export function ProductCustomizationModal({ item, open, onClose, onConfirm, init
 
   useEffect(() => {
     if (!item || !open) return
-    setSelectedAdd(initialSelectedAdd ? new Set(initialSelectedAdd) : new Set())
+    setAddQtys(initialAddQtys ?? {})
     setSelectedRem(initialSelectedRem ? new Set(initialSelectedRem) : new Set())
     setObservacoes(initialObservacoes ?? '')
     setAddOpen(false)
@@ -95,12 +100,8 @@ export function ProductCustomizationModal({ item, open, onClose, onConfirm, init
       .finally(() => setLoading(false))
   }, [item, open])
 
-  function toggleAdd(nome: string) {
-    setSelectedAdd((prev) => {
-      const next = new Set(prev)
-      next.has(nome) ? next.delete(nome) : next.add(nome)
-      return next
-    })
+  function setQty(nome: string, qty: number) {
+    setAddQtys((prev) => ({ ...prev, [nome]: Math.max(0, Math.min(MAX_QTY, qty)) }))
   }
 
   function toggleRem(nome: string) {
@@ -114,13 +115,15 @@ export function ProductCustomizationModal({ item, open, onClose, onConfirm, init
   function handleConfirm() {
     const extras: ExtraOption[] = [
       ...adicionais
-        .filter((a) => selectedAdd.has(a.nome))
-        .map((a) => ({ nome: a.nome, preco: a.preco, tipo: 'add' as const })),
+        .filter((a) => (addQtys[a.nome] ?? 0) > 0)
+        .map((a) => ({ nome: a.nome, preco: a.preco, tipo: 'add' as const, qty: addQtys[a.nome] })),
       ...[...selectedRem].map((nome) => ({ nome, preco: 0, tipo: 'remove' as const })),
     ]
     onConfirm(extras, observacoes.trim())
     onClose()
   }
+
+  const totalAddQty = Object.values(addQtys).reduce((s, q) => s + (q > 0 ? q : 0), 0)
 
   if (!item) return null
 
@@ -138,25 +141,44 @@ export function ProductCustomizationModal({ item, open, onClose, onConfirm, init
             {adicionais.length > 0 && (
               <DropdownSection
                 title="Adicionais"
-                badgeCount={selectedAdd.size}
+                badgeCount={totalAddQty}
                 isOpen={addOpen}
                 onToggle={() => setAddOpen((v) => !v)}
               >
-                {adicionais.map((a) => (
-                  <div key={a.id} className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Checkbox
-                        id={`add-${a.id}`}
-                        checked={selectedAdd.has(a.nome)}
-                        onCheckedChange={() => toggleAdd(a.nome)}
-                      />
-                      <Label htmlFor={`add-${a.id}`} className="capitalize cursor-pointer text-sm">
-                        {a.nome}
-                      </Label>
+                {adicionais.map((a) => {
+                  const qty = addQtys[a.nome] ?? 0
+                  const subtotal = a.preco * qty
+                  return (
+                    <div key={a.id} className="flex items-center justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm capitalize leading-tight">{a.nome}</p>
+                        <p className="text-xs text-primary font-medium">
+                          +{formatBRL(a.preco)} cada
+                          {qty > 1 && <span className="text-muted-foreground"> · {formatBRL(subtotal)}</span>}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => setQty(a.nome, qty - 1)}
+                          disabled={qty === 0}
+                          className="h-7 w-7 rounded-md border flex items-center justify-center disabled:opacity-30 hover:bg-muted transition-colors"
+                        >
+                          <Minus className="h-3 w-3" />
+                        </button>
+                        <span className="w-5 text-center text-sm font-semibold tabular-nums">{qty}</span>
+                        <button
+                          type="button"
+                          onClick={() => setQty(a.nome, qty + 1)}
+                          disabled={qty >= MAX_QTY}
+                          className="h-7 w-7 rounded-md border flex items-center justify-center disabled:opacity-30 hover:bg-muted transition-colors"
+                        >
+                          <Plus className="h-3 w-3" />
+                        </button>
+                      </div>
                     </div>
-                    <span className="text-sm text-primary font-medium">+{formatBRL(a.preco)}</span>
-                  </div>
-                ))}
+                  )
+                })}
               </DropdownSection>
             )}
 

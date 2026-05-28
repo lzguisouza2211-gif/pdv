@@ -15,6 +15,7 @@ export type ExtraOption = {
   nome: string
   preco: number
   tipo: 'add' | 'remove'
+  qty?: number  // quantidade do adicional (padrão 1); não aplicável a retirados
 }
 
 export type CartItem = {

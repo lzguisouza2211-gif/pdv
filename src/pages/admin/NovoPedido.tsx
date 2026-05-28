@@ -33,7 +33,7 @@ const TIPOS: { value: TipoEntrega; label: string }[] = [
 ]
 
 function calcLineTotal(line: CartLine) {
-  const extras = line.extras.filter(e => e.tipo === 'add').reduce((s, e) => s + e.preco, 0)
+  const extras = line.extras.filter(e => e.tipo === 'add').reduce((s, e) => s + e.preco * (e.qty ?? 1), 0)
   return (line.item.preco + extras) * line.qty
 }
 
@@ -115,7 +115,7 @@ export function NovoPedido() {
     const itensPayload: PedidoItem[] = cart.map(l => {
       const adicionais = l.extras.filter(e => e.tipo === 'add')
       const retirados = l.extras.filter(e => e.tipo === 'remove')
-      const precoUnitario = l.item.preco + adicionais.reduce((s, e) => s + e.preco, 0)
+      const precoUnitario = l.item.preco + adicionais.reduce((s, e) => s + e.preco * (e.qty ?? 1), 0)
       return {
         nome: l.item.nome,
         preco: precoUnitario,
@@ -172,7 +172,10 @@ export function NovoPedido() {
                     <p className="font-medium text-sm leading-tight">{l.item.nome}</p>
                     {adicionais.length > 0 && (
                       <p className="text-xs text-green-600 mt-0.5">
-                        + {adicionais.map(a => `${a.nome} (+${formatBRL(a.preco)})`).join(', ')}
+                        + {adicionais.map(a => {
+                          const q = a.qty ?? 1
+                          return `${q > 1 ? `${q}x ` : ''}${a.nome} (+${formatBRL(a.preco * q)})`
+                        }).join(', ')}
                       </p>
                     )}
                     {retirados.length > 0 && (
@@ -293,6 +296,15 @@ export function NovoPedido() {
         )}
         <p className="text-sm font-semibold leading-tight pr-20">{item.nome}</p>
         <p className="text-sm text-primary font-bold mt-2">{formatBRL(item.preco)}</p>
+        {!indisponivel && item.ingredientes_indisponiveis && item.ingredientes_indisponiveis.length > 0 && (
+          <div className="mt-1 flex flex-wrap gap-1">
+            {item.ingredientes_indisponiveis.map((ing) => (
+              <Badge key={ing} variant="outline" className="text-[10px] px-1.5 py-0 text-destructive border-destructive">
+                sem {ing}
+              </Badge>
+            ))}
+          </div>
+        )}
         {!indisponivel && CUSTOM_CATS.has(item.categoria) && (
           <p className="text-[10px] text-muted-foreground mt-1">toque para personalizar</p>
         )}

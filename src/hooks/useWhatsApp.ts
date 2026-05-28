@@ -122,5 +122,18 @@ export function useWhatsApp() {
     }
   }, [api])
 
-  return { ...wpp, loading, error, disconnect, reconnect }
+  const clearSession = useCallback(async () => {
+    if (!api) return
+    setLoading(true)
+    setError(null)
+    try {
+      await api.clearSession()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao limpar sessão')
+    } finally {
+      setLoading(false)
+    }
+  }, [api])
+
+  return { ...wpp, loading, error, disconnect, reconnect, clearSession }
 }

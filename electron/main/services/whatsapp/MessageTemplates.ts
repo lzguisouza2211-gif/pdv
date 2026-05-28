@@ -9,11 +9,15 @@ function totalLine(total?: number): string {
 export const MessageTemplates = {
   confirmed(p: OrderNotificationPayload): string {
     const time = p.estimatedTime ?? 30
+    const itemsBlock = p.items && p.items.length > 0
+      ? [``, `🛒 *Itens:*`, ...p.items]
+      : []
     return [
       `✅ *Pedido #${p.orderId} confirmado!*`,
       ``,
       `Olá, *${p.customerName}*! 👋`,
       `Seu pedido foi recebido e já entrou na fila de preparo.`,
+      ...itemsBlock,
       ``,
       `⏱️ Tempo estimado: *${time} minutos*${totalLine(p.total)}`,
       ``,

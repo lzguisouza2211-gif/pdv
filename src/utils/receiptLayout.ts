@@ -117,14 +117,20 @@ export function buildDeliveryReceipt(pedido: Pedido): string {
   let qtdItens = 0
 
   for (const item of pedido.itens) {
-    const lineTotal = item.preco * item.quantidade
-    subtotal += lineTotal
+    // item.preco já inclui adicionais (com qty) — calcula base separado para exibir cada extra
+    const adicionaisUnitSum = (item.adicionais ?? []).reduce((s, a) => s + a.preco * (a.qty ?? 1), 0)
+    const basePreco = item.preco - adicionaisUnitSum
+    const baseTotal = basePreco * item.quantidade
+    subtotal += baseTotal
     qtdItens += item.quantidade
-    lines.push(pad(`${item.quantidade}x ${item.nome}`, fmtR$(lineTotal)))
+    lines.push(pad(`${item.quantidade}x ${item.nome}`, fmtR$(baseTotal)))
     for (const r of item.retirados) lines.push(`  - Sem ${r.nome}`)
-    for (const a of item.adicionais) {
-      subtotal += a.preco * item.quantidade
-      lines.push(pad(`  + ${a.nome}`, fmtR$(a.preco)))
+    for (const a of item.adicionais ?? []) {
+      const aqty = a.qty ?? 1
+      const addTotal = a.preco * aqty * item.quantidade
+      subtotal += addTotal
+      const label = aqty > 1 ? `${aqty}x ${a.nome}` : a.nome
+      lines.push(pad(`  + ${label}`, fmtR$(addTotal)))
     }
     if (item.observacoes) lines.push(`  Obs: ${item.observacoes}`)
   }
@@ -132,9 +138,11 @@ export function buildDeliveryReceipt(pedido: Pedido): string {
   lines.push(SEP)
   lines.push(`QTD. ITENS: ${qtdItens}`)
   lines.push(SEP)
-  lines.push(pad('SUBTOTAL:', fmtR$(subtotal)))
-  if (pedido.taxa_entrega > 0) lines.push(pad('TAXA ENTREGA:', fmtR$(pedido.taxa_entrega)))
-  lines.push(SEP)
+  if (pedido.taxa_entrega > 0) {
+    lines.push(pad('SUBTOTAL:', fmtR$(subtotal)))
+    lines.push(pad('TAXA ENTREGA:', fmtR$(pedido.taxa_entrega)))
+    lines.push(SEP)
+  }
   lines.push(pad('TOTAL A PAGAR:', fmtR$(pedido.total)))
   lines.push(SEP)
 

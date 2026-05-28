@@ -147,9 +147,12 @@ export function Dashboard() {
         )}
       </Card>
 
-      {/* Monitor de pedidos */}
+      {/* Kanban de pedidos */}
       <div>
-        <h2 className="text-xl font-bold mb-4">Pedidos do Dia</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-bold">Pedidos do Dia</h2>
+          <span className="text-sm text-muted-foreground">{pedidosDoDia.length} pedido{pedidosDoDia.length !== 1 ? 's' : ''}</span>
+        </div>
         <OrderMonitor pedidos={pedidosDoDia} onUpdate={reload} />
       </div>
     </div>

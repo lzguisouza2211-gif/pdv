@@ -19,7 +19,7 @@
    ```
 4. Publicar o release:
    ```bash
-   npm run electron:publish
+   export $(grep GH_TOKEN .env | xargs) && npm run electron:publish
    ```
 
 O cliente recebe a atualização automaticamente na próxima vez que abrir o app.
@@ -65,8 +65,11 @@ A Vercel redeploya a versão web automaticamente.
 ### 4. Publicar o executável
 
 ```bash
-npm run electron:publish
+export $(grep GH_TOKEN .env | xargs) && npm run electron:publish
 ```
+
+> **Importante:** o `GH_TOKEN` está no `.env` mas não é exportado automaticamente pro shell.
+> O comando acima lê o token do arquivo e exporta antes de rodar o publish.
 
 Isso faz tudo automaticamente:
 - Builda o React e o Electron
@@ -84,7 +87,7 @@ O cliente abre o app → recebe notificação de atualização → clica "Reinic
 
 - **Nunca publicar com a mesma versão** — o cliente não vai receber a atualização
 - **Sempre fazer merge para main antes** de rodar `electron:publish`
-- O `GH_TOKEN` já está no `.env` — não precisa configurar nada a cada vez
+- O `GH_TOKEN` está no `.env`, mas precisa ser exportado pro shell antes do publish (o comando acima já faz isso)
 - A versão web (Vercel) atualiza sozinha no push para `main`
 
 ---
@@ -99,5 +102,5 @@ npm run electron:dev
 npm run electron:pack:win
 
 # Publicar atualização (clientes recebem automaticamente)
-npm run electron:publish
+export $(grep GH_TOKEN .env | xargs) && npm run electron:publish
 ```

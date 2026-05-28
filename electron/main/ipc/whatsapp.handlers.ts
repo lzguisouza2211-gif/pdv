@@ -61,6 +61,11 @@ export function registerWhatsAppIpcHandlers(
     return { ok: true }
   })
 
+  ipcMain.handle('whatsapp:clear-session', async () => {
+    await client.clearSession()
+    return { ok: true }
+  })
+
   // ─── Main → Renderer (eventos do BaileysClient) ────────────────────────────
 
   client.on('qr', async (rawQr: string) => {
@@ -92,6 +97,10 @@ export function registerWhatsAppIpcHandlers(
 
   client.on('max_retries', () => {
     broadcast('whatsapp:disconnected', { statusCode: -1, reason: 'max_retries' })
+    broadcastStatus(service)
+  })
+
+  client.on('connecting', () => {
     broadcastStatus(service)
   })
 }

@@ -20,11 +20,11 @@ export function normalizePedidoPayload(items: CartItem[]): PedidoItem[] {
 
 export function gerarCartKey(
   productId: string,
-  extras: { nome: string; tipo: 'add' | 'remove' }[],
+  extras: { nome: string; tipo: 'add' | 'remove'; qty?: number }[],
   observacoes?: string
 ): string {
   const extrasStr = extras
-    .map((e) => `${e.tipo}:${e.nome}`)
+    .map((e) => `${e.tipo}:${e.nome}:${e.qty ?? 1}`)
     .sort()
     .join('|')
   return `${productId}__${extrasStr}__${observacoes ?? ''}`

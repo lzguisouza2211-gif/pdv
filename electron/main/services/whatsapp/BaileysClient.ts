@@ -22,29 +22,37 @@ import makeWASocket, {
 } from '@whiskeysockets/baileys'
 import { Boom } from '@hapi/boom'
 import { EventEmitter } from 'events'
-import { join, dirname } from 'path'
-import { fileURLToPath } from 'url'
+import { join } from 'path'
 import { app } from 'electron'
 import pino from 'pino'
 
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = dirname(__filename)
 
 // Logger silencioso para o Baileys (muito verbose por padrão)
 const baileysLogger = pino({ level: 'silent' })
 
 function getAuthDir(): string {
-  if (app.isPackaged) {
-    // Produção: diretório de dados do app — gravável após instalação
-    return join(app.getPath('userData'), 'auth_info_baileys')
-  }
-  // Dev: reusa a sessão do backend Baileys existente (sem re-scan de QR)
-  // electron-dist/main/services/whatsapp → ../../../../ → raiz → backend/auth_info_baileys
-  return join(__dirname, '..', '..', '..', '..', 'backend', 'auth_info_baileys')
+  // Sempre usa userData — evita que o electronmon detecte mudanças nos arquivos de sessão
+  return join(app.getPath('userData'), 'auth_info_baileys')
 }
 
 const MAX_RETRIES = 5
 const RETRY_DELAY_MS = 5_000
+const FETCH_VERSION_TIMEOUT_MS = 8_000
+
+async function fetchVersionSafe(): Promise<[number, number, number]> {
+  try {
+    const result = await Promise.race([
+      fetchLatestBaileysVersion(),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('timeout')), FETCH_VERSION_TIMEOUT_MS)
+      ),
+    ])
+    return result.version as [number, number, number]
+  } catch {
+    console.warn('[WPP] fetchLatestBaileysVersion falhou/timeout — usando versão embutida')
+    return [2, 3000, 1035194821]
+  }
+}
 
 import type { ConnectionState } from './types.js'
 
@@ -64,14 +72,15 @@ export class BaileysClient extends EventEmitter {
     this.closeSocket()
 
     this.state = 'connecting'
+    this.emit('connecting')
     const authDir = getAuthDir()
     const { state, saveCreds } = await useMultiFileAuthState(authDir)
-    const { version } = await fetchLatestBaileysVersion()
+    const version = await fetchVersionSafe()
 
     console.log(`[WPP] Iniciando conexão (Baileys ${version.join('.')})…`)
 
     this.socket = makeWASocket({
-      version,
+      version: version,
       auth: {
         creds: state.creds,
         keys: makeCacheableSignalKeyStore(state.keys, baileysLogger),
@@ -143,8 +152,12 @@ export class BaileysClient extends EventEmitter {
       this.emit('disconnected', { statusCode, reason })
 
       if (statusCode === DisconnectReason.loggedOut) {
-        console.warn('[WPP] Sessão encerrada (logout). Reconecte pelo painel.')
+        console.warn('[WPP] Sessão inválida — limpando credenciais para novo QR')
         this.emit('logout')
+        // Credenciais velhas causariam loop infinito; limpa e reabre para mostrar QR
+        void this.clearAuthFiles().then(() => {
+          this.retryTimer = setTimeout(() => this.connect(), 1_000)
+        })
         return
       }
 
@@ -184,9 +197,22 @@ export class BaileysClient extends EventEmitter {
     }
   }
 
+  private async clearAuthFiles(): Promise<void> {
+    const { rm } = await import('fs/promises')
+    try {
+      await rm(getAuthDir(), { recursive: true, force: true })
+      console.log('[WPP] Credenciais removidas — novo QR será gerado')
+    } catch (err) {
+      console.error('[WPP] Erro ao remover credenciais:', err)
+    }
+  }
+
   async disconnect(): Promise<void> {
     this.cancelRetry()
-    this.retryCount = MAX_RETRIES // impede auto-reconexão após desconexão manual
+    this.retryCount = MAX_RETRIES
+    // Seta _intentionalClose ANTES do logout para evitar que o evento loggedOut
+    // acione a limpeza de credenciais e reconexão automática
+    this._intentionalClose = true
     try {
       await this.socket?.logout()
     } catch {}
@@ -200,6 +226,14 @@ export class BaileysClient extends EventEmitter {
   async reconnect(): Promise<void> {
     this.cancelRetry()
     this.retryCount = 0
+    await this.connect()
+  }
+
+  async clearSession(): Promise<void> {
+    this.closeSocket()
+    this.cancelRetry()
+    this.retryCount = 0
+    await this.clearAuthFiles()
     await this.connect()
   }
 }

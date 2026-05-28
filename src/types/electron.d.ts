@@ -65,6 +65,7 @@ declare global {
         notifyOrder: (payload: WppOrderPayload) => Promise<{ ok: boolean }>
         disconnect: () => Promise<{ ok: boolean }>
         reconnect: () => Promise<{ ok: boolean }>
+        clearSession: () => Promise<{ ok: boolean }>
 
         /**
          * Recebe QR como data URL PNG (base64) pronto para <img src={...} />.

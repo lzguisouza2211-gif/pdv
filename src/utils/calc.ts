@@ -3,7 +3,7 @@ import { CartItem } from '@/types'
 export function calcItemPrice(item: CartItem): number {
   const extras = item.extras
     .filter((e) => e.tipo === 'add')
-    .reduce((s, e) => s + e.preco, 0)
+    .reduce((s, e) => s + e.preco * (e.qty ?? 1), 0)
   return item.price + extras
 }
 

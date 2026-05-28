@@ -1,6 +1,5 @@
 import { supabase } from '@/services/supabaseClient'
 import { Pedido, PedidoStatus } from '@/types'
-import { enviarNotificacaoWpp } from '@/services/whatsapp.service'
 
 type PedidoPayload = Omit<Pedido, 'id' | 'created_at' | 'updated_at' | 'status'>
 
@@ -12,22 +11,25 @@ export async function criarPedido(payload: PedidoPayload): Promise<string> {
     .single()
 
   if (error) throw error
-
-  const nome = payload.cliente.split(' ')[0]
-  const mensagem =
-    `Olá, ${nome}! 🎉 Seu pedido *#${data.id}* foi recebido com sucesso!\n\n` +
-    `Em breve começamos a preparar. Te avisamos aqui! 😊`
-  void enviarNotificacaoWpp(payload.phone, mensagem)
-
   return data.id as string
 }
 
 export async function fetchPedidosDoDia(): Promise<Pedido[]> {
-  const today = new Date().toISOString().split('T')[0]
+  // Usa horário de Brasília (UTC-3): meia-noite BRT = 03:00 UTC
+  const hoje = new Intl.DateTimeFormat('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+  }).format(new Date())
+  // pt-BR retorna "dd/mm/yyyy" → "yyyy-mm-dd"
+  const [d, m, y] = hoje.split('/')
+  const startUTC = new Date(`${y}-${m}-${d}T00:00:00-03:00`).toISOString()
+  const endUTC   = new Date(`${y}-${m}-${d}T23:59:59-03:00`).toISOString()
+
   const { data, error } = await supabase
     .from('pedidos')
     .select('*')
-    .gte('created_at', `${today}T00:00:00`)
+    .gte('created_at', startUTC)
+    .lte('created_at', endUTC)
     .order('created_at', { ascending: false })
 
   if (error) throw error
@@ -68,12 +70,6 @@ export async function cancelarPedido(pedido: Pedido): Promise<void> {
     .update({ status: 'Cancelado' })
     .eq('id', pedido.id)
   if (error) throw error
-
-  const nome = pedido.cliente.split(' ')[0]
-  const mensagem =
-    `❌ Olá, ${nome}! Infelizmente seu pedido *#${pedido.id}* foi cancelado.\n\n` +
-    `Entre em contato para mais informações.`
-  void enviarNotificacaoWpp(pedido.phone, mensagem)
 }
 
 export async function avancarStatus(pedido: Pedido): Promise<void> {
@@ -92,20 +88,4 @@ export async function avancarStatus(pedido: Pedido): Promise<void> {
     .eq('id', pedido.id)
 
   if (error) throw error
-
-  const nome = pedido.cliente.split(' ')[0]
-  let mensagem = ''
-
-  if (nextStatus === 'Em preparo') {
-    mensagem =
-      `🍽️ Boa notícia, ${nome}! Seu pedido *#${pedido.id}* já está sendo preparado!\n\n` +
-      `Em breve estará pronto.`
-  } else if (nextStatus === 'Finalizado') {
-    mensagem =
-      pedido.tipoentrega === 'entrega'
-        ? `🛵 Seu pedido *#${pedido.id}* saiu para entrega, ${nome}! Já vem aí! 📦`
-        : `✅ Pronto, ${nome}! Seu pedido *#${pedido.id}* está pronto para retirada! 😄`
-  }
-
-  if (mensagem) void enviarNotificacaoWpp(pedido.phone, mensagem)
 }

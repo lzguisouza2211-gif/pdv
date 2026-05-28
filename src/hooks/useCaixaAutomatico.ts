@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react'
+import { useEffect, useRef } from 'react'
 import { format } from 'date-fns'
 import { supabase } from '@/services/supabaseClient'
 import { fetchPedidos } from '@/services/api/pedidos.service'
@@ -54,52 +54,53 @@ export async function caixaEstaFechado(data: string): Promise<boolean> {
 // Called from AdminLayout so it runs on every admin page
 export function useCaixaAutomatico(userId: string | undefined) {
   const { toast } = useToast()
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
-
-  const verificar = useCallback(async () => {
-    if (!userId) return
-
-    const hoje = format(new Date(), 'yyyy-MM-dd')
-    const dataAnterior = localStorage.getItem(STORAGE_KEY)
-
-    if (dataAnterior && dataAnterior !== hoje) {
-      try {
-        const fechou = await fecharDia(dataAnterior, userId)
-        if (fechou) {
-          // We need to get the total to show in toast — re-query the fechamento we just inserted
-          const { data: registro } = await supabase
-            .from('fechamentos_caixa')
-            .select('total, total_pedidos')
-            .eq('data', dataAnterior)
-            .maybeSingle()
-
-          toast({
-            title: 'Caixa fechado automaticamente',
-            description: registro
-              ? `${dataAnterior} · ${registro.total_pedidos} pedidos · ${formatBRL(registro.total)}`
-              : `Caixa de ${dataAnterior} registrado.`,
-          })
-        }
-      } catch (err) {
-        console.error('Erro ao fechar caixa automático:', err)
-      }
-    }
-
-    localStorage.setItem(STORAGE_KEY, hoje)
-  }, [userId, toast])
+  const toastRef = useRef(toast)
+  const userIdRef = useRef(userId)
+  useEffect(() => { toastRef.current = toast }, [toast])
+  useEffect(() => { userIdRef.current = userId }, [userId])
 
   useEffect(() => {
+    async function verificar() {
+      const uid = userIdRef.current
+      if (!uid) return
+
+      const hoje = format(new Date(), 'yyyy-MM-dd')
+      const dataAnterior = localStorage.getItem(STORAGE_KEY)
+
+      if (dataAnterior && dataAnterior !== hoje) {
+        try {
+          const fechou = await fecharDia(dataAnterior, uid)
+          if (fechou) {
+            const { data: registro } = await supabase
+              .from('fechamentos_caixa')
+              .select('total, total_pedidos')
+              .eq('data', dataAnterior)
+              .maybeSingle()
+
+            toastRef.current({
+              title: 'Caixa fechado automaticamente',
+              description: registro
+                ? `${dataAnterior} · ${registro.total_pedidos} pedidos · ${formatBRL(registro.total)}`
+                : `Caixa de ${dataAnterior} registrado.`,
+            })
+          }
+        } catch (err) {
+          console.error('Erro ao fechar caixa automático:', err)
+        }
+      }
+
+      localStorage.setItem(STORAGE_KEY, hoje)
+    }
+
     verificar()
 
-    // Detect midnight crossing every 60s
-    timerRef.current = setInterval(() => {
+    // Detecta virada de dia a cada 60s
+    const timer = setInterval(() => {
       const hoje = format(new Date(), 'yyyy-MM-dd')
       const stored = localStorage.getItem(STORAGE_KEY)
       if (stored && stored !== hoje) verificar()
     }, 60_000)
 
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current)
-    }
-  }, [verificar])
+    return () => clearInterval(timer)
+  }, []) // sem dependências — usa refs para acessar valores atuais
 }

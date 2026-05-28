@@ -162,7 +162,7 @@ export function Pedidos() {
                         <span className="text-primary">{formatBRL(item.preco * item.quantidade)}</span>
                       </div>
                       {item.adicionais && item.adicionais.length > 0 && (
-                        <p className="text-xs text-green-700 mt-0.5">+ {item.adicionais.map(a => a.nome).join(', ')}</p>
+                        <p className="text-xs text-green-700 mt-0.5">+ {item.adicionais.map(a => (a.qty ?? 1) > 1 ? `${a.qty}x ${a.nome}` : a.nome).join(', ')}</p>
                       )}
                       {item.retirados && item.retirados.length > 0 && (
                         <p className="text-xs text-muted-foreground mt-0.5">Sem: {item.retirados.map(r => r.nome).join(', ')}</p>

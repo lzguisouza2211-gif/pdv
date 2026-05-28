@@ -89,6 +89,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     reconnect: (): Promise<{ ok: boolean }> =>
       ipcRenderer.invoke('whatsapp:reconnect'),
 
+    clearSession: (): Promise<{ ok: boolean }> =>
+      ipcRenderer.invoke('whatsapp:clear-session'),
+
     /** Recebe o QR Code como data URL (PNG base64) pronto para <img src="..."> */
     onQr: (cb: (qrDataUrl: string | null) => void): (() => void) => {
       const handler = (_: IpcRendererEvent, d: { qrDataUrl: string | null }) =>

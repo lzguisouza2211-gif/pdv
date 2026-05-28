@@ -82,7 +82,7 @@ export function EditarPedidoModal({ pedido, onClose, onSaved }: Props) {
   function addFromCardapio(item: ItemCardapio, extras: ExtraOption[], obs: string) {
     const adicionais = extras.filter(e => e.tipo === 'add')
     const retirados = extras.filter(e => e.tipo === 'remove')
-    const precoFinal = item.preco + adicionais.reduce((s, e) => s + e.preco, 0)
+    const precoFinal = item.preco + adicionais.reduce((s, e) => s + e.preco * (e.qty ?? 1), 0)
 
     setEditItems(prev => {
       if (adicionais.length > 0 || retirados.length > 0 || obs) {
