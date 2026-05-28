@@ -1,17 +1,19 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { QuickMenuManagement } from '@/components/admin/QuickMenuManagement'
+import { IngredientesIndisponiveisPanel } from '@/components/admin/IngredientesIndisponiveisPanel'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
+import { ChevronDown } from 'lucide-react'
 import { fetchDeliveryFee, updateDeliveryFee } from '@/services/api/deliveryFee.service'
 import { formatBRL } from '@/utils/calc'
-import { useEffect } from 'react'
 
 export function GestaoCardapio() {
   const [taxaEntrega, setTaxaEntrega] = useState<number>(5)
   const [taxaEdit, setTaxaEdit] = useState('')
   const [savingTaxa, setSavingTaxa] = useState(false)
+  const [ingredientesOpen, setIngredientesOpen] = useState(false)
 
   useEffect(() => {
     fetchDeliveryFee().then(setTaxaEntrega).catch(console.error)
@@ -63,6 +65,25 @@ export function GestaoCardapio() {
         <CardContent>
           <QuickMenuManagement />
         </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader
+          className="cursor-pointer select-none"
+          onClick={() => setIngredientesOpen((o) => !o)}
+        >
+          <CardTitle className="text-base flex items-center justify-between">
+            Ingredientes Indisponíveis
+            <ChevronDown
+              className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${ingredientesOpen ? 'rotate-180' : ''}`}
+            />
+          </CardTitle>
+        </CardHeader>
+        {ingredientesOpen && (
+          <CardContent>
+            <IngredientesIndisponiveisPanel />
+          </CardContent>
+        )}
       </Card>
     </div>
   )

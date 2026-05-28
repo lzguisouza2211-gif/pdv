@@ -1,34 +1,49 @@
+import { useState, useEffect } from 'react'
 import { usePedidos } from '@/hooks/usePedidos'
 import { useStoreStatus } from '@/hooks/useStoreStatus'
-import { OrderMonitor } from '@/components/admin/OrderMonitor'
-import { IngredientesIndisponiveisPanel } from '@/components/admin/IngredientesIndisponiveisPanel'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { updateStoreOpen, updateTempoEspera } from '@/services/api/storeStatus.service'
+import { updateStoreOpen, updateTempoEspera, fetchPixConfig, updatePixConfig } from '@/services/api/storeStatus.service'
 import { formatBRL } from '@/utils/calc'
-import { useState } from 'react'
-import { ShoppingBag, DollarSign, TrendingUp, Clock, ChevronDown } from 'lucide-react'
+import { toast } from '@/hooks/use-toast'
+import { ShoppingBag, DollarSign, TrendingUp, Clock, QrCode } from 'lucide-react'
 
 export function Dashboard() {
-  const { pedidos, reload } = usePedidos()
+  const { pedidos } = usePedidos()
   const { status, reload: reloadStatus } = useStoreStatus()
+
   const [tempoEdit, setTempoEdit] = useState('')
   const [savingTempo, setSavingTempo] = useState(false)
-  const [ingredientesOpen, setIngredientesOpen] = useState(false)
 
-  const pedidosDoDia = pedidos.filter(p => p.status !== 'Cancelado')
+  const [pixKey, setPixKey] = useState('')
+  const [pixDisplay, setPixDisplay] = useState('')
+  const [pixRecipient, setPixRecipient] = useState('')
+  const [savingPix, setSavingPix] = useState(false)
+
+  const pedidosDoDia = pedidos.filter((p) => p.status !== 'Cancelado')
   const faturamento = pedidosDoDia.reduce((s, p) => s + p.total, 0)
   const ticketMedio = pedidosDoDia.length > 0 ? faturamento / pedidosDoDia.length : 0
+
+  useEffect(() => {
+    fetchPixConfig().then((config) => {
+      if (config) {
+        setPixKey(config.key)
+        setPixDisplay(config.displayKey)
+        setPixRecipient(config.recipientName)
+      }
+    })
+  }, [])
 
   async function handleToggleStore(checked: boolean) {
     try {
       await updateStoreOpen(checked)
       reloadStatus()
-    } catch (err) {
-      console.error(err)
+    } catch (err: unknown) {
+      const e = err as { message?: string }
+      toast({ title: 'Erro ao atualizar status', description: e?.message, variant: 'destructive' })
     }
   }
 
@@ -40,10 +55,36 @@ export function Dashboard() {
       await updateTempoEspera(val)
       setTempoEdit('')
       reloadStatus()
-    } catch (err) {
-      console.error(err)
+      toast({ title: 'Tempo de espera atualizado!' })
+    } catch (err: unknown) {
+      const e = err as { message?: string }
+      toast({ title: 'Erro ao salvar', description: e?.message, variant: 'destructive' })
     } finally {
       setSavingTempo(false)
+    }
+  }
+
+  async function handleSavePix() {
+    if (!pixKey.trim()) return
+    setSavingPix(true)
+    try {
+      await updatePixConfig({
+        key: pixKey.trim(),
+        displayKey: pixDisplay.trim() || pixKey.trim(),
+        recipientName: pixRecipient.trim(),
+      })
+      toast({ title: 'Chave PIX salva!' })
+    } catch (err: unknown) {
+      const e = err as { message?: string }
+      toast({
+        title: 'Erro ao salvar PIX',
+        description: e?.message?.includes('column')
+          ? 'Adicione as colunas pix_key, pix_display_key, pix_recipient_name na tabela store_status do Supabase.'
+          : e?.message,
+        variant: 'destructive',
+      })
+    } finally {
+      setSavingPix(false)
     }
   }
 
@@ -87,35 +128,34 @@ export function Dashboard() {
               <Clock className="h-4 w-4" /> Tempo espera
             </CardTitle>
           </CardHeader>
-          <CardContent className="flex items-center gap-2">
+          <CardContent>
             <p className="text-2xl font-bold">{status?.tempo_espera_padrao ?? '—'} min</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Controles */}
-      <div className="grid md:grid-cols-2 gap-4">
+      <div className="grid md:grid-cols-3 gap-4">
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Status da Loja</CardTitle>
           </CardHeader>
           <CardContent className="flex items-center gap-3">
-            <Switch
-              checked={status?.is_open ?? true}
-              onCheckedChange={handleToggleStore}
-            />
-            <Label>{status?.is_open ? 'Aberta' : 'Fechada'}</Label>
+            <Switch checked={status?.is_open ?? true} onCheckedChange={handleToggleStore} />
+            <Label className="text-base">{status?.is_open ? '🟢 Aberta' : '🔴 Fechada'}</Label>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Tempo de espera (min)</CardTitle>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Clock className="h-4 w-4" /> Tempo de espera
+            </CardTitle>
           </CardHeader>
           <CardContent className="flex gap-2">
             <Input
               type="number"
-              placeholder={String(status?.tempo_espera_padrao ?? 30)}
+              placeholder={`Atual: ${status?.tempo_espera_padrao ?? 30} min`}
               value={tempoEdit}
               onChange={(e) => setTempoEdit(e.target.value)}
               className="flex-1 min-w-0"
@@ -125,35 +165,34 @@ export function Dashboard() {
             </Button>
           </CardContent>
         </Card>
-      </div>
 
-      {/* Ingredientes */}
-      <Card>
-        <CardHeader
-          className="cursor-pointer select-none"
-          onClick={() => setIngredientesOpen((o) => !o)}
-        >
-          <CardTitle className="text-base flex items-center justify-between">
-            Ingredientes Indisponíveis
-            <ChevronDown
-              className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${ingredientesOpen ? 'rotate-180' : ''}`}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <QrCode className="h-4 w-4" /> Chave PIX
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <Input
+              placeholder="Chave (CNPJ, CPF, e-mail…)"
+              value={pixKey}
+              onChange={(e) => setPixKey(e.target.value)}
             />
-          </CardTitle>
-        </CardHeader>
-        {ingredientesOpen && (
-          <CardContent>
-            <IngredientesIndisponiveisPanel />
+            <Input
+              placeholder="Chave formatada (exibição)"
+              value={pixDisplay}
+              onChange={(e) => setPixDisplay(e.target.value)}
+            />
+            <Input
+              placeholder="Nome do recebedor"
+              value={pixRecipient}
+              onChange={(e) => setPixRecipient(e.target.value)}
+            />
+            <Button onClick={handleSavePix} disabled={savingPix || !pixKey.trim()} className="w-full">
+              Salvar PIX
+            </Button>
           </CardContent>
-        )}
-      </Card>
-
-      {/* Kanban de pedidos */}
-      <div>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold">Pedidos do Dia</h2>
-          <span className="text-sm text-muted-foreground">{pedidosDoDia.length} pedido{pedidosDoDia.length !== 1 ? 's' : ''}</span>
-        </div>
-        <OrderMonitor pedidos={pedidosDoDia} onUpdate={reload} />
+        </Card>
       </div>
     </div>
   )

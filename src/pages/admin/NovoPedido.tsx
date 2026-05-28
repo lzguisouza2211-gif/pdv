@@ -87,18 +87,18 @@ export function NovoPedido({ defaultCliente, lockTipoEntrega, onSuccess }: NovoP
     }
   }
 
-  function handleCustomConfirm(extras: ExtraOption[], obs: string) {
+  function handleCustomConfirm(extras: ExtraOption[], obs: string, qty: number) {
     if (!pendingItem) return
     const key = gerarCartKey(pendingItem.id, extras, obs)
-    addToCart(pendingItem, key, extras, obs)
+    addToCart(pendingItem, key, extras, obs, qty)
     setPendingItem(null)
   }
 
-  function addToCart(item: ItemCardapio, key: string, extras: ExtraOption[], obs: string) {
+  function addToCart(item: ItemCardapio, key: string, extras: ExtraOption[], obs: string, qty = 1) {
     setCart(prev => {
       const existing = prev.find(l => l.key === key)
-      if (existing) return prev.map(l => l.key === key ? { ...l, qty: l.qty + 1 } : l)
-      return [...prev, { key, item, qty: 1, extras, obs }]
+      if (existing) return prev.map(l => l.key === key ? { ...l, qty: l.qty + qty } : l)
+      return [...prev, { key, item, qty, extras, obs }]
     })
   }
 

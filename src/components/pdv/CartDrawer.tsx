@@ -6,14 +6,12 @@ import { validarTelefoneBrasileiro, formatarTelefone } from '@/utils/validation'
 import { formatBRL, calcTotal, calcTroco, calcItemPrice } from '@/utils/calc'
 import { criarPedido } from '@/services/api/pedidos.service'
 import { buscarClientePorTelefone, saveClienteSession, getClienteSession } from '@/services/api/clientes.service'
-import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Separator } from '@/components/ui/separator'
 import { PixKeyDisplay } from './PixKeyDisplay'
 import { ProductCustomizationModal } from './ProductCustomizationModal'
-import { X, Minus, Plus, ShoppingCart, Pencil } from 'lucide-react'
+import { X, Minus, Plus, ShoppingCart, Pencil, Trash2 } from 'lucide-react'
 
 const CUSTOM_CATS = new Set(['Lanches', 'Macarrão', 'Omeletes'])
 
@@ -36,6 +34,18 @@ interface Props {
   deliveryFee: number
 }
 
+const TIPO_LABEL: Record<TipoEntrega, string> = {
+  retirada: 'Retirada',
+  entrega: 'Entrega',
+  local: 'Mesa',
+}
+
+const PG_LABEL: Record<FormaPagamento, string> = {
+  dinheiro: 'Dinheiro',
+  cartao: 'Cartão',
+  pix: 'Pix',
+}
+
 export function CartDrawer({ open, onClose, onSuccess, deliveryFee }: Props) {
   const { items, remove, removeAll, updateQty, add, clear } = useCart()
   const [editingItem, setEditingItem] = useState<CartItem | null>(null)
@@ -56,7 +66,6 @@ export function CartDrawer({ open, onClose, onSuccess, deliveryFee }: Props) {
   const phoneRef = useRef(phone)
   useEffect(() => { phoneRef.current = phone }, [phone])
 
-  // Pré-preenche ao abrir o drawer se o formulário estiver vazio e houver sessão salva
   useEffect(() => {
     if (!open || phoneRef.current) return
     const session = getClienteSession()
@@ -183,9 +192,8 @@ export function CartDrawer({ open, onClose, onSuccess, deliveryFee }: Props) {
     }
   }
 
-  function handleEditConfirm(extras: ExtraOption[], observacoes: string) {
+  function handleEditConfirm(extras: ExtraOption[], observacoes: string, qty: number) {
     if (!editingItem) return
-    const oldQty = editingItem.qty
     removeAll(editingItem.cartKey)
     const newCartKey = gerarCartKey(editingItem.id, extras, observacoes)
     add({
@@ -193,7 +201,7 @@ export function CartDrawer({ open, onClose, onSuccess, deliveryFee }: Props) {
       id: editingItem.id,
       name: editingItem.name,
       price: editingItem.price,
-      qty: oldQty,
+      qty,
       categoria: editingItem.categoria,
       observacoes,
       extras,
@@ -219,168 +227,210 @@ export function CartDrawer({ open, onClose, onSuccess, deliveryFee }: Props) {
 
   return (
     <>
-      {open && <div
-        className="drawer-overlay fixed inset-0 z-40 bg-black/50"
-        onClick={onClose}
-      />}
-      {open && <div className="drawer-panel fixed right-0 top-0 z-50 h-full w-full max-w-md bg-background shadow-xl flex flex-col">
+      <div className="drawer-overlay fixed inset-0 z-40 bg-black/50" onClick={onClose} />
+
+      <div className="drawer-panel fixed right-0 top-0 z-50 h-full w-full max-w-md bg-background shadow-xl flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b">
-          <div className="flex items-center gap-2">
-            <ShoppingCart className="h-5 w-5" />
-            <span className="font-semibold text-lg">Carrinho ({items.length})</span>
+        <div className="bg-primary text-primary-foreground px-4 pt-4 pb-4 flex-shrink-0">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <ShoppingCart className="h-5 w-5" />
+              <h2 className="font-extrabold text-lg">Carrinho</h2>
+            </div>
+            <button
+              onClick={onClose}
+              className="p-1.5 rounded-full hover:bg-primary-foreground/20 transition-colors"
+            >
+              <X className="h-5 w-5" />
+            </button>
           </div>
-          <Button size="icon" variant="ghost" onClick={onClose}>
-            <X className="h-5 w-5" />
-          </Button>
+          {items.length > 0 && (
+            <p className="text-primary-foreground/70 text-sm mt-1">
+              {items.reduce((s, i) => s + i.qty, 0)} item(s) · {formatBRL(subtotal)}
+            </p>
+          )}
         </div>
 
-        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
           {/* Items */}
           {items.length === 0 ? (
-            <p className="text-center text-muted-foreground py-8">Carrinho vazio</p>
-          ) : (
-            <div className="space-y-3">
-              {items.map((item) => (
-                <div key={item.cartKey} className="border rounded-md p-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium capitalize text-sm">{item.name}</p>
-                      {item.extras.filter(e => e.tipo === 'add').map((e) => (
-                        <p key={e.nome} className="text-xs text-muted-foreground">+ {e.nome} ({formatBRL(e.preco)})</p>
-                      ))}
-                      {item.extras.filter(e => e.tipo === 'remove').map((e) => (
-                        <p key={e.nome} className="text-xs text-muted-foreground">- sem {e.nome}</p>
-                      ))}
-                      {item.observacoes && (
-                        <p className="text-xs italic text-muted-foreground">{item.observacoes}</p>
-                      )}
-                    </div>
-                    <p className="text-sm font-semibold text-primary shrink-0">
-                      {formatBRL(calcItemPrice(item) * item.qty)}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2 mt-2">
-                    <Button size="icon" variant="outline" className="h-9 w-9"
-                      onClick={() => remove(item.cartKey)}>
-                      <Minus className="h-4 w-4" />
-                    </Button>
-                    <span className="text-sm font-medium w-6 text-center">{item.qty}</span>
-                    <Button size="icon" variant="outline" className="h-9 w-9"
-                      onClick={() => updateQty(item.cartKey, item.qty + 1)}>
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                    {CUSTOM_CATS.has(item.categoria ?? '') && (
-                      <Button size="icon" variant="ghost" className="h-9 w-9 ml-auto"
-                        onClick={() => setEditingItem(item)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              ))}
+            <div className="flex flex-col items-center justify-center py-16 text-muted-foreground gap-3">
+              <ShoppingCart className="h-12 w-12 opacity-30" />
+              <p className="font-medium">Carrinho vazio</p>
             </div>
+          ) : (
+            <>
+              <div className="space-y-3">
+                {items.map((item) => (
+                  <div key={item.cartKey} className="bg-card border-2 rounded-2xl p-3.5 shadow-sm">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold capitalize text-sm leading-tight">{item.name}</p>
+                        {item.extras.filter((e) => e.tipo === 'add').map((e) => (
+                          <p key={e.nome} className="text-xs text-primary mt-0.5">
+                            ➕ {(e.qty ?? 1) > 1 ? `${e.qty}x ` : ''}{e.nome}
+                            {e.preco > 0 && ` (+${formatBRL(e.preco * (e.qty ?? 1))})`}
+                          </p>
+                        ))}
+                        {item.extras.filter((e) => e.tipo === 'remove').map((e) => (
+                          <p key={e.nome} className="text-xs text-muted-foreground">❌ sem {e.nome}</p>
+                        ))}
+                        {item.observacoes && (
+                          <p className="text-xs italic text-muted-foreground mt-0.5">📝 {item.observacoes}</p>
+                        )}
+                      </div>
+                      <p className="text-sm font-extrabold text-primary shrink-0">
+                        {formatBRL(calcItemPrice(item) * item.qty)}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2 mt-3 pt-3 border-t">
+                      {/* Qty stepper */}
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => remove(item.cartKey)}
+                          className="h-8 w-8 rounded-full border-2 flex items-center justify-center hover:bg-muted transition-colors"
+                        >
+                          <Minus className="h-3.5 w-3.5" />
+                        </button>
+                        <span className="w-8 text-center font-bold tabular-nums">{item.qty}</span>
+                        <button
+                          onClick={() => updateQty(item.cartKey, item.qty + 1)}
+                          className="h-8 w-8 rounded-full border-2 border-primary flex items-center justify-center hover:bg-primary/10 transition-colors"
+                        >
+                          <Plus className="h-3.5 w-3.5 text-primary" />
+                        </button>
+                      </div>
+
+                      <div className="ml-auto flex items-center gap-2">
+                        {CUSTOM_CATS.has(item.categoria ?? '') && (
+                          <button
+                            onClick={() => setEditingItem(item)}
+                            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                            Editar
+                          </button>
+                        )}
+                        <button
+                          onClick={() => removeAll(item.cartKey)}
+                          className="flex items-center gap-1 text-xs text-destructive hover:text-destructive/70 transition-colors"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          Remover
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Resumo */}
+              <div className="bg-primary/5 border-2 border-primary/20 rounded-2xl p-4 space-y-2">
+                {tipoentrega === 'entrega' && (
+                  <>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Subtotal</span>
+                      <span className="font-medium">{formatBRL(subtotal)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Taxa de entrega</span>
+                      <span className="font-medium">{formatBRL(taxa)}</span>
+                    </div>
+                    <Separator className="my-1" />
+                  </>
+                )}
+                <div className="flex justify-between font-extrabold text-base">
+                  <span>Total</span>
+                  <span className="text-primary">{formatBRL(total)}</span>
+                </div>
+              </div>
+            </>
           )}
 
-          <Separator />
-
-          {/* Resumo */}
-          <div className="space-y-1 text-sm">
-            <div className="flex justify-between">
-              <span>Subtotal</span>
-              <span>{formatBRL(subtotal)}</span>
-            </div>
-            {tipoentrega === 'entrega' && (
-              <div className="flex justify-between text-muted-foreground">
-                <span>Taxa de entrega</span>
-                <span>{formatBRL(taxa)}</span>
-              </div>
-            )}
-            <div className="flex justify-between font-bold text-base">
-              <span>Total</span>
-              <span className="text-primary">{formatBRL(total)}</span>
-            </div>
-          </div>
-
-          <Separator />
-
           {/* Formulário */}
-          <div className="space-y-3">
-            <div>
-              <Label htmlFor="cliente">Nome *</Label>
-              <Input
-                id="cliente"
-                value={cliente}
-                onChange={(e) => setCliente(e.target.value)}
-                placeholder="Seu nome"
-                className={errors.cliente ? 'border-destructive' : ''}
-              />
-              {errors.cliente && <p className="text-xs text-destructive mt-1">{errors.cliente}</p>}
-            </div>
+          <div className="space-y-4">
+            <div className="space-y-3">
+              <div>
+                <Label htmlFor="cliente" className="text-sm font-semibold">Nome *</Label>
+                <Input
+                  id="cliente"
+                  value={cliente}
+                  onChange={(e) => setCliente(e.target.value)}
+                  placeholder="Seu nome"
+                  className={`mt-1 rounded-xl ${errors.cliente ? 'border-destructive' : ''}`}
+                />
+                {errors.cliente && <p className="text-xs text-destructive mt-1">{errors.cliente}</p>}
+              </div>
 
-            <div>
-              <Label htmlFor="phone">Telefone *</Label>
-              <Input
-                id="phone"
-                value={phone}
-                onChange={(e) => setPhone(formatarTelefone(e.target.value))}
-                onBlur={handlePhoneBlur}
-                placeholder="(11) 99999-9999"
-                className={errors.phone ? 'border-destructive' : ''}
-              />
-              {errors.phone && <p className="text-xs text-destructive mt-1">{errors.phone}</p>}
+              <div>
+                <Label htmlFor="phone" className="text-sm font-semibold">Telefone *</Label>
+                <Input
+                  id="phone"
+                  value={phone}
+                  onChange={(e) => setPhone(formatarTelefone(e.target.value))}
+                  onBlur={handlePhoneBlur}
+                  placeholder="(11) 99999-9999"
+                  className={`mt-1 rounded-xl ${errors.phone ? 'border-destructive' : ''}`}
+                />
+                {errors.phone && <p className="text-xs text-destructive mt-1">{errors.phone}</p>}
+                {clienteEncontrado && (
+                  <p className="text-xs text-primary mt-1 font-medium">✓ Cliente encontrado: {clienteEncontrado.nome}</p>
+                )}
+              </div>
             </div>
 
             {/* Tipo de entrega */}
             <div>
-              <Label>Tipo de entrega</Label>
-              <RadioGroup
-                value={tipoentrega}
-                onValueChange={(v) => setTipoentrega(v as TipoEntrega)}
-                className="flex flex-wrap gap-3 mt-1"
-              >
+              <p className="text-sm font-semibold mb-2">Tipo de entrega</p>
+              <div className="flex gap-2">
                 {(['retirada', 'entrega', 'local'] as TipoEntrega[]).map((t) => (
-                  <div key={t} className="flex items-center gap-2">
-                    <RadioGroupItem value={t} id={`tipo-${t}`} />
-                    <Label htmlFor={`tipo-${t}`} className="cursor-pointer capitalize">
-                      {t === 'local' ? 'Mesa' : t.charAt(0).toUpperCase() + t.slice(1)}
-                    </Label>
-                  </div>
+                  <button
+                    key={t}
+                    onClick={() => setTipoentrega(t)}
+                    className={`flex-1 py-2.5 rounded-xl text-sm font-semibold border-2 transition-all ${
+                      tipoentrega === t
+                        ? 'border-primary bg-primary text-primary-foreground'
+                        : 'border-border hover:border-primary/50'
+                    }`}
+                  >
+                    {TIPO_LABEL[t]}
+                  </button>
                 ))}
-              </RadioGroup>
+              </div>
             </div>
 
             {tipoentrega === 'entrega' && (
               <div className="space-y-2">
                 <div>
-                  <Label htmlFor="endereco">Rua *</Label>
+                  <Label htmlFor="endereco" className="text-sm font-semibold">Rua *</Label>
                   <Input
                     id="endereco"
                     value={endereco}
                     onChange={(e) => setEndereco(e.target.value)}
                     placeholder="Nome da rua"
-                    className={errors.endereco ? 'border-destructive' : ''}
+                    className={`mt-1 rounded-xl ${errors.endereco ? 'border-destructive' : ''}`}
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <Label htmlFor="numero">Número *</Label>
+                    <Label htmlFor="numero" className="text-sm font-semibold">Número *</Label>
                     <Input
                       id="numero"
                       value={numero}
                       onChange={(e) => setNumero(e.target.value)}
                       placeholder="123"
-                      className={errors.numero ? 'border-destructive' : ''}
+                      className={`mt-1 rounded-xl ${errors.numero ? 'border-destructive' : ''}`}
                     />
                   </div>
                   <div>
-                    <Label htmlFor="bairro">Bairro *</Label>
+                    <Label htmlFor="bairro" className="text-sm font-semibold">Bairro *</Label>
                     <Input
                       id="bairro"
                       value={bairro}
                       onChange={(e) => setBairro(e.target.value)}
                       placeholder="Bairro"
-                      className={errors.bairro ? 'border-destructive' : ''}
+                      className={`mt-1 rounded-xl ${errors.bairro ? 'border-destructive' : ''}`}
                     />
                   </div>
                 </div>
@@ -389,26 +439,27 @@ export function CartDrawer({ open, onClose, onSuccess, deliveryFee }: Props) {
 
             {/* Forma de pagamento */}
             <div>
-              <Label>Forma de pagamento</Label>
-              <RadioGroup
-                value={formapagamento}
-                onValueChange={(v) => setFormapagamento(v as FormaPagamento)}
-                className="flex flex-wrap gap-3 mt-1"
-              >
+              <p className="text-sm font-semibold mb-2">Forma de pagamento</p>
+              <div className="flex gap-2">
                 {(['dinheiro', 'cartao', 'pix'] as FormaPagamento[]).map((f) => (
-                  <div key={f} className="flex items-center gap-2">
-                    <RadioGroupItem value={f} id={`pg-${f}`} />
-                    <Label htmlFor={`pg-${f}`} className="cursor-pointer capitalize">
-                      {f === 'cartao' ? 'Cartão' : f.charAt(0).toUpperCase() + f.slice(1)}
-                    </Label>
-                  </div>
+                  <button
+                    key={f}
+                    onClick={() => setFormapagamento(f)}
+                    className={`flex-1 py-2.5 rounded-xl text-sm font-semibold border-2 transition-all ${
+                      formapagamento === f
+                        ? 'border-primary bg-primary text-primary-foreground'
+                        : 'border-border hover:border-primary/50'
+                    }`}
+                  >
+                    {PG_LABEL[f]}
+                  </button>
                 ))}
-              </RadioGroup>
+              </div>
             </div>
 
             {formapagamento === 'dinheiro' && (
               <div>
-                <Label htmlFor="troco">Troco para R$ (opcional)</Label>
+                <Label htmlFor="troco" className="text-sm font-semibold">Troco para R$ (opcional)</Label>
                 <Input
                   id="troco"
                   type="number"
@@ -417,10 +468,11 @@ export function CartDrawer({ open, onClose, onSuccess, deliveryFee }: Props) {
                   value={valorPago}
                   onChange={(e) => setValorPago(e.target.value)}
                   placeholder={formatBRL(total)}
+                  className="mt-1 rounded-xl"
                 />
                 {troco !== null && troco >= 0 && (
                   <p className="text-sm mt-1 text-muted-foreground">
-                    Troco: <span className="font-semibold">{formatBRL(troco)}</span>
+                    Troco: <span className="font-bold text-foreground">{formatBRL(troco)}</span>
                   </p>
                 )}
               </div>
@@ -428,27 +480,26 @@ export function CartDrawer({ open, onClose, onSuccess, deliveryFee }: Props) {
 
             {formapagamento === 'pix' && <PixKeyDisplay total={total} />}
 
-            {errors.submit && (
-              <p className="text-sm text-destructive">{errors.submit}</p>
-            )}
-            {errors.cart && (
-              <p className="text-sm text-destructive">{errors.cart}</p>
+            {(errors.submit || errors.cart) && (
+              <p className="text-sm text-destructive font-medium">{errors.submit ?? errors.cart}</p>
             )}
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="px-4 py-3 border-t">
-          <Button
-            className="w-full"
-            size="lg"
+        {/* Botão de confirmação */}
+        <div className="px-4 py-4 border-t flex-shrink-0">
+          <button
             onClick={handleSubmit}
             disabled={loading || items.length === 0}
+            className="w-full bg-primary text-primary-foreground py-4 rounded-2xl font-bold text-base shadow-lg flex items-center justify-between px-5 disabled:opacity-60 active:scale-[0.98] transition-all"
           >
-            {loading ? 'Enviando…' : `Confirmar Pedido — ${formatBRL(total)}`}
-          </Button>
+            <span>{loading ? 'Enviando…' : 'Confirmar Pedido'}</span>
+            <span className="bg-primary-foreground/20 px-3 py-1 rounded-full text-sm font-extrabold">
+              {formatBRL(total)}
+            </span>
+          </button>
         </div>
-      </div>}
+      </div>
 
       <ProductCustomizationModal
         item={editingAsCardapio}
@@ -456,10 +507,11 @@ export function CartDrawer({ open, onClose, onSuccess, deliveryFee }: Props) {
         onClose={() => setEditingItem(null)}
         onConfirm={handleEditConfirm}
         initialAddQtys={Object.fromEntries(
-          editingItem?.extras.filter(e => e.tipo === 'add').map(e => [e.nome, e.qty ?? 1]) ?? []
+          editingItem?.extras.filter((e) => e.tipo === 'add').map((e) => [e.nome, e.qty ?? 1]) ?? []
         )}
-        initialSelectedRem={new Set(editingItem?.extras.filter(e => e.tipo === 'remove').map(e => e.nome))}
+        initialSelectedRem={new Set(editingItem?.extras.filter((e) => e.tipo === 'remove').map((e) => e.nome))}
         initialObservacoes={editingItem?.observacoes ?? ''}
+        initialQty={editingItem?.qty ?? 1}
         confirmLabel="Salvar alterações"
       />
     </>

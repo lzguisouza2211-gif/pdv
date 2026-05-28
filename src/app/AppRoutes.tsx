@@ -8,8 +8,9 @@ import { Login } from '@/pages/auth/Login'
 import { Dashboard } from '@/pages/admin/Dashboard'
 import { GestaoCardapio } from '@/pages/admin/GestaoCardapio'
 import { Pedidos } from '@/pages/admin/Pedidos'
-import { Financeiro } from '@/pages/admin/Financeiro'
+import { KanbanPedidos } from '@/pages/admin/KanbanPedidos'
 import { NovoPedido } from '@/pages/admin/NovoPedido'
+import { Financeiro } from '@/pages/admin/Financeiro'
 import { Clientes } from '@/pages/admin/Clientes'
 import { WhatsApp } from '@/pages/admin/WhatsApp'
 import { Impressora } from '@/pages/admin/Impressora'
@@ -48,10 +49,11 @@ function AdminLayout({ children }: { children: React.ReactNode }) {
             value={tabValue}
             onValueChange={(v) => navigate(`/admin/${v === 'dashboard' ? '' : v}`)}
           >
-            <TabsList className="w-full grid grid-cols-8 mb-2">
+            <TabsList className="w-full grid grid-cols-9 mb-2">
               <TabsTrigger value="dashboard" className="text-xs sm:text-sm">Dashboard</TabsTrigger>
               <TabsTrigger value="cardapio" className="text-xs sm:text-sm">Cardápio</TabsTrigger>
               <TabsTrigger value="pedidos" className="text-xs sm:text-sm">Pedidos</TabsTrigger>
+              <TabsTrigger value="historico" className="text-xs sm:text-sm">Histórico</TabsTrigger>
               <TabsTrigger value="pedido" className="text-xs sm:text-sm">Novo Pedido</TabsTrigger>
               <TabsTrigger value="financeiro" className="text-xs sm:text-sm">Financeiro</TabsTrigger>
               <TabsTrigger value="clientes" className="text-xs sm:text-sm flex items-center gap-1">
@@ -104,86 +106,36 @@ export function AppRoutes() {
     <Routes>
       <Route path="/" element={<Cardapio />} />
       <Route path="/login" element={user ? <Navigate to="/admin" replace /> : <Login />} />
-      <Route
-        path="/admin"
-        element={
-          <ProtectedRoute>
-            <AdminLayout>
-              <Dashboard />
-            </AdminLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/cardapio"
-        element={
-          <ProtectedRoute>
-            <AdminLayout>
-              <GestaoCardapio />
-            </AdminLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/pedidos"
-        element={
-          <ProtectedRoute>
-            <AdminLayout>
-              <Pedidos />
-            </AdminLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/pedido"
-        element={
-          <ProtectedRoute>
-            <AdminLayout>
-              <NovoPedido />
-            </AdminLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/financeiro"
-        element={
-          <ProtectedRoute>
-            <AdminLayout>
-              <Financeiro />
-            </AdminLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/clientes"
-        element={
-          <ProtectedRoute>
-            <AdminLayout>
-              <Clientes />
-            </AdminLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/whatsapp"
-        element={
-          <ProtectedRoute>
-            <AdminLayout>
-              <WhatsApp />
-            </AdminLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/impressora"
-        element={
-          <ProtectedRoute>
-            <AdminLayout>
-              <Impressora />
-            </AdminLayout>
-          </ProtectedRoute>
-        }
-      />
+
+      <Route path="/admin" element={
+        <ProtectedRoute><AdminLayout><Dashboard /></AdminLayout></ProtectedRoute>
+      } />
+      <Route path="/admin/cardapio" element={
+        <ProtectedRoute><AdminLayout><GestaoCardapio /></AdminLayout></ProtectedRoute>
+      } />
+      <Route path="/admin/pedidos" element={
+        <ProtectedRoute><AdminLayout><KanbanPedidos /></AdminLayout></ProtectedRoute>
+      } />
+      <Route path="/admin/historico" element={
+        <ProtectedRoute><AdminLayout><Pedidos /></AdminLayout></ProtectedRoute>
+      } />
+      <Route path="/admin/financeiro" element={
+        <ProtectedRoute><AdminLayout><Financeiro /></AdminLayout></ProtectedRoute>
+      } />
+      <Route path="/admin/clientes" element={
+        <ProtectedRoute><AdminLayout><Clientes /></AdminLayout></ProtectedRoute>
+      } />
+      <Route path="/admin/whatsapp" element={
+        <ProtectedRoute><AdminLayout><WhatsApp /></AdminLayout></ProtectedRoute>
+      } />
+      <Route path="/admin/impressora" element={
+        <ProtectedRoute><AdminLayout><Impressora /></AdminLayout></ProtectedRoute>
+      } />
+
+      <Route path="/admin/pedido" element={
+        <ProtectedRoute><AdminLayout><NovoPedido /></AdminLayout></ProtectedRoute>
+      } />
+
       <Route path="/garcom" element={<GarcomPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

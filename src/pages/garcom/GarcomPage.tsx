@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { NovoPedido } from '@/pages/admin/NovoPedido'
 import { ChevronLeft, Settings, X } from 'lucide-react'
 import { supabase } from '@/services/supabaseClient'
@@ -28,6 +29,9 @@ function buildMesas(config: MesaConfig): string[] {
 
 export function GarcomPage() {
   const [mesa, setMesa] = useState<string | null>(null)
+  const location = useLocation()
+  const navigate = useNavigate()
+  const isAdmin = location.pathname.startsWith('/admin')
   const [config, setConfig] = useState<MesaConfig>(loadConfig)
   const [showSettings, setShowSettings] = useState(false)
   const [draftConfig, setDraftConfig] = useState<MesaConfig>(loadConfig)
@@ -121,7 +125,16 @@ export function GarcomPage() {
     <div className="min-h-screen bg-background flex flex-col">
       <header className="bg-primary text-primary-foreground px-4 pt-safe pb-4 sticky top-0 z-10">
         <div className="flex items-center justify-between pt-2">
-          <div className="w-8" />
+          {isAdmin ? (
+            <button
+              onClick={() => navigate('/admin')}
+              className="p-1.5 rounded-full hover:bg-primary-foreground/20 transition-colors"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+          ) : (
+            <div className="w-8" />
+          )}
           <div className="text-center">
             <h1 className="text-xl font-bold">🍔 Luizão Lanches</h1>
             <p className="text-primary-foreground/70 text-sm mt-0.5">Selecione a mesa</p>

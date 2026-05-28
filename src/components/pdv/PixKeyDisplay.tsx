@@ -1,4 +1,6 @@
+import { useEffect, useState } from 'react'
 import { PIX_CONFIG } from '@/config/pix'
+import { fetchPixConfig } from '@/services/api/storeStatus.service'
 import { formatBRL } from '@/utils/calc'
 import { Copy } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -8,10 +10,28 @@ interface Props {
   total: number
 }
 
+interface PixInfo {
+  key: string
+  displayKey: string
+  recipientName: string
+}
+
 export function PixKeyDisplay({ total }: Props) {
+  const [pix, setPix] = useState<PixInfo>({
+    key: PIX_CONFIG.key,
+    displayKey: PIX_CONFIG.displayKey,
+    recipientName: PIX_CONFIG.recipientName,
+  })
+
+  useEffect(() => {
+    fetchPixConfig().then((config) => {
+      if (config) setPix(config)
+    })
+  }, [])
+
   function copyKey() {
-    navigator.clipboard.writeText(PIX_CONFIG.key).then(() => {
-      toast({ title: 'Chave copiada!', description: PIX_CONFIG.displayKey })
+    navigator.clipboard.writeText(pix.key).then(() => {
+      toast({ title: 'Chave copiada!', description: pix.displayKey })
     })
   }
 
@@ -20,9 +40,9 @@ export function PixKeyDisplay({ total }: Props) {
       <p className="text-sm font-semibold text-center">Pague via PIX</p>
       <div className="flex items-center justify-between gap-2">
         <div>
-          <p className="text-xs text-muted-foreground">CNPJ</p>
-          <p className="font-mono font-semibold">{PIX_CONFIG.displayKey}</p>
-          <p className="text-xs text-muted-foreground">{PIX_CONFIG.recipientName}</p>
+          <p className="text-xs text-muted-foreground">Chave PIX</p>
+          <p className="font-mono font-semibold">{pix.displayKey}</p>
+          <p className="text-xs text-muted-foreground">{pix.recipientName}</p>
         </div>
         <Button size="icon" variant="ghost" onClick={copyKey}>
           <Copy className="h-4 w-4" />

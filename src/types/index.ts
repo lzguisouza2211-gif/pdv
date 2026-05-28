@@ -80,6 +80,9 @@ export interface Cliente {
 export type StoreStatus = {
   is_open: boolean
   tempo_espera_padrao: number
+  pix_key?: string
+  pix_display_key?: string
+  pix_recipient_name?: string
 }
 
 export type Adicional = {
