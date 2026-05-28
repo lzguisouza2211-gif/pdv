@@ -1,7 +1,7 @@
 {
   "name": "pdv-lanchonete-luizao",
   "private": true,
-  "version": "1.0.4",
+  "version": "1.0.5",
   "type": "module",
   "main": "electron-dist/main/main.js",
   "electronmon": {
@@ -27,7 +27,7 @@
     "electron:build:win": "cross-env ELECTRON=true vite build && tsc -p tsconfig.electron.json && tsc -p tsconfig.preload.json && node scripts/postbuild-electron.mjs",
     "electron:pack": "npm run electron:build && electron-builder",
     "electron:pack:win": "npm run electron:build:win && electron-builder --win",
-    "electron:publish": "npm run electron:build:win && electron-builder --win --publish always"
+    "electron:publish": "export GH_TOKEN=$(grep GH_TOKEN .env | cut -d '=' -f2) && npm run electron:build:win && electron-builder --win --publish always"
   },
   "build": {
     "appId": "com.pdv.luizaolanches",
