@@ -1,7 +1,7 @@
 {
   "name": "pdv-lanchonete-luizao",
   "private": true,
-  "version": "1.0.9",
+  "version": "1.0.10",
   "type": "module",
   "main": "electron-dist/main/main.js",
   "electronmon": {
