@@ -2,7 +2,7 @@ import { useWhatsApp } from '@/hooks/useWhatsApp'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Smartphone, Wifi, WifiOff, RefreshCw, LogOut, Clock } from 'lucide-react'
+import { Smartphone, Wifi, WifiOff, RefreshCw, LogOut, Clock, Phone } from 'lucide-react'
 
 function formatUptime(seconds: number | null): string {
   if (seconds === null) return '—'
@@ -25,7 +25,7 @@ function StatusBadge({ state }: { state: string }) {
 }
 
 export function WhatsApp() {
-  const { connected, state, qrDataUrl, uptime, loading, error, disconnect, reconnect, clearSession } =
+  const { connected, state, qrDataUrl, uptime, phoneNumber, loading, error, disconnect, reconnect, clearSession } =
     useWhatsApp()
 
   // Página só faz sentido dentro do Electron
@@ -148,8 +148,14 @@ export function WhatsApp() {
         <Card className="border-green-200 bg-green-50">
           <CardContent className="flex items-center gap-3 py-4">
             <Wifi className="w-6 h-6 text-green-600 shrink-0" />
-            <div>
+            <div className="flex flex-col gap-0.5">
               <p className="text-sm font-medium text-green-900">WhatsApp conectado</p>
+              {phoneNumber && (
+                <p className="text-xs text-green-700 flex items-center gap-1">
+                  <Phone className="w-3 h-3" />
+                  {phoneNumber}
+                </p>
+              )}
               <p className="text-xs text-green-700">
                 Notificações de pedidos estão sendo enviadas automaticamente.
               </p>

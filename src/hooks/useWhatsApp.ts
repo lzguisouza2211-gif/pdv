@@ -7,6 +7,7 @@ interface WhatsAppState {
   state: ConnectionState
   qrDataUrl: string | null
   uptime: number | null
+  phoneNumber: string | null
   /** true quando está dentro do Electron; false na versão web */
   isElectron: boolean
 }
@@ -16,6 +17,7 @@ const INITIAL: WhatsAppState = {
   state: 'disconnected',
   qrDataUrl: null,
   uptime: null,
+  phoneNumber: null,
   isElectron: false,
 }
 
@@ -40,6 +42,7 @@ export function useWhatsApp() {
         state: s.state,
         qrDataUrl: s.qrCode,
         uptime: s.uptime,
+        phoneNumber: s.phoneNumber,
       }))
     }).catch(() => {})
   }, [api])
@@ -55,6 +58,7 @@ export function useWhatsApp() {
       }),
 
       api.onConnected(() => {
+        // phoneNumber chega via onStatusChange logo após a conexão
         setWpp((prev) => ({
           ...prev,
           connected: true,
@@ -87,6 +91,7 @@ export function useWhatsApp() {
           connected: s.connected,
           state: s.state,
           uptime: s.uptime,
+          phoneNumber: s.phoneNumber,
         }))
       }),
     ]

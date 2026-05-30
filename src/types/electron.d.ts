@@ -20,6 +20,7 @@ interface WppStatus {
   state: WppConnectionState
   qrCode: string | null
   uptime: number | null
+  phoneNumber: string | null
 }
 
 interface WppOrderPayload {

@@ -63,6 +63,7 @@ export class BaileysClient extends EventEmitter {
   private retryTimer: ReturnType<typeof setTimeout> | null = null
   private connectedAt: number | null = null
   private currentQR: string | null = null
+  private phoneNumber: string | null = null
   private _intentionalClose = false
 
   // ─── Conexão ─────────────────────────────────────────────────────────────
@@ -131,7 +132,8 @@ export class BaileysClient extends EventEmitter {
       this.retryCount = 0
       this.connectedAt = Date.now()
       this.currentQR = null
-      console.log('[WPP] Conectado ao WhatsApp com sucesso!')
+      this.phoneNumber = this.parsePhoneFromJid(this.socket?.user?.id ?? null)
+      console.log(`[WPP] Conectado ao WhatsApp com sucesso! Número: ${this.phoneNumber ?? 'desconhecido'}`)
       this.emit('connected')
     }
 
@@ -143,6 +145,7 @@ export class BaileysClient extends EventEmitter {
 
       this.state = 'disconnected'
       this.connectedAt = null
+      this.phoneNumber = null
 
       const statusCode = (lastDisconnect?.error as Boom)?.output?.statusCode
       const reason =
@@ -194,7 +197,26 @@ export class BaileysClient extends EventEmitter {
       uptime: this.connectedAt
         ? Math.floor((Date.now() - this.connectedAt) / 1000)
         : null,
+      phoneNumber: this.phoneNumber,
     }
+  }
+
+  /**
+   * Extrai o número de telefone de um JID do Baileys.
+   * O formato do JID é "5511999999999:12@s.whatsapp.net" — queremos só os dígitos
+   * antes do ":" e formatamos como "+55 XX XXXXX-XXXX".
+   */
+  private parsePhoneFromJid(jid: string | null): string | null {
+    if (!jid) return null
+    // JID formato: "5511999999999:12@s.whatsapp.net" — pega só o que está antes de ":" ou "@"
+    const raw = jid.split(':')[0].split('@')[0].replace(/\D/g, '')
+    if (raw.length < 10) return null
+    const local = raw.startsWith('55') ? raw.slice(2) : raw
+    if (local.length === 11)
+      return `+55 ${local.slice(0, 2)} ${local.slice(2, 7)}-${local.slice(7)}`
+    if (local.length === 10)
+      return `+55 ${local.slice(0, 2)} ${local.slice(2, 6)}-${local.slice(6)}`
+    return `+${raw}`
   }
 
   private async clearAuthFiles(): Promise<void> {

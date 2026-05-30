@@ -27,4 +27,6 @@ export interface WhatsAppStatus {
   state: ConnectionState
   qrCode: string | null
   uptime: number | null
+  /** Número vinculado no formato +55 XX XXXXX-XXXX, ou null quando desconectado */
+  phoneNumber: string | null
 }
