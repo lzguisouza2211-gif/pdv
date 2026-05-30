@@ -31,8 +31,9 @@ export async function enviarNotificacaoWpp(
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ phone: normalized, message }),
     })
-  } catch {
+  } catch (err) {
     // Notificação é best-effort — nunca bloqueia o fluxo do pedido
+    console.error('[WPP] Falha ao enviar mensagem:', err)
   }
 }
 
@@ -59,7 +60,8 @@ export async function notificarStatusPedido(params: {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ phone: normalized, ...rest }),
     })
-  } catch {
+  } catch (err) {
     // best-effort
+    console.error('[WPP] Falha ao notificar pedido:', err)
   }
 }

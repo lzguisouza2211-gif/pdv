@@ -11,7 +11,6 @@ import { registerPrinterIpcHandlers } from './ipc/printer.handlers.js'
 
 import { getClient } from './services/whatsapp/BaileysClient.js'
 import { getService } from './services/whatsapp/WhatsAppService.js'
-import { WhatsAppHttpServer } from './services/whatsapp/WhatsAppHttpServer.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -122,9 +121,6 @@ app.whenReady().then(async () => {
   const wppService = getService()
 
   registerWhatsAppIpcHandlers(wppService, wppClient)
-
-  const wppHttp = new WhatsAppHttpServer(wppService)
-  wppHttp.start(3001)
 
   // Conecta ao WhatsApp em background — não bloqueia a abertura da janela
   wppClient.connect().catch((err) =>

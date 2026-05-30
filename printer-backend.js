@@ -31,9 +31,6 @@ const PORT = process.env.PRINTER_PORT ?? 3000
 const PRINTER_PATH = process.env.PRINTER_PATH ?? ''   // ex: COM3, /dev/usb/lp0
 const PRINTER_NAME = process.env.PRINTER_NAME ?? ''   // nome no Windows
 
-// URL do backend Baileys (porta 3001)
-const WPP_BACKEND_URL = process.env.WPP_BACKEND_URL ?? 'http://localhost:3001'
-
 app.use(cors())
 app.use(express.json())
 
@@ -170,34 +167,8 @@ app.post('/print', async (req, res) => {
   }
 })
 
-// Proxy para o backend Baileys — delega o envio de WhatsApp ao servidor dedicado.
-app.post('/send-whatsapp', async (req, res) => {
-  const { phone, message } = req.body
-  if (!phone || !message) return res.status(400).json({ error: 'phone and message required' })
-
-  try {
-    const response = await fetch(`${WPP_BACKEND_URL}/whatsapp/send`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone, message }),
-    })
-    const data = await response.json()
-    if (!response.ok) {
-      console.error('[WPP] Erro no backend Baileys:', data)
-      return res.status(502).json({ error: data.error ?? 'WPP backend error' })
-    }
-    console.log(`[WPP] Mensagem enviada para ${phone}`)
-    res.json({ ok: true })
-  } catch (err) {
-    console.error('[WPP] Backend Baileys indisponível:', err.message)
-    // best-effort: não falha o fluxo do PDV se o WPP estiver fora
-    res.json({ ok: true, skipped: true, reason: 'wpp_backend_unavailable' })
-  }
-})
-
 app.listen(PORT, () => {
   console.log(`\nBackend rodando em http://localhost:${PORT}`)
   console.log(`Impressora (serial): ${PRINTER_PATH || 'não configurada'}`)
-  console.log(`Impressora (Windows): ${PRINTER_NAME || 'padrão do sistema'}`)
-  console.log(`WhatsApp (Baileys):  ${WPP_BACKEND_URL}\n`)
+  console.log(`Impressora (Windows): ${PRINTER_NAME || 'padrão do sistema'}\n`)
 })

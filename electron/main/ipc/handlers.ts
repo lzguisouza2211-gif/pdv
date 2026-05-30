@@ -1,6 +1,7 @@
 import { ipcMain, BrowserWindow } from 'electron'
 import type { ProcessManager } from '../processManager.js'
 import { SUPABASE_URL, SUPABASE_KEY } from '../credentials.js'
+import { logger } from '../logger.js'
 
 export function registerIpcHandlers(pm: ProcessManager): void {
   // Credenciais do Supabase — entregues ao renderer via preload (fora do bundle Vite)
@@ -16,6 +17,9 @@ export function registerIpcHandlers(pm: ProcessManager): void {
     await pm.restart(name)
     return pm.getStatuses()
   })
+
+  // Retorna o caminho do arquivo de log — usado na UI de diagnóstico
+  ipcMain.handle('app:log-path', () => logger.getPath())
 
   // Propaga mudanças de status para todas as janelas abertas
   pm.onStatusChange((statuses) => {
