@@ -45,23 +45,25 @@ export async function notificarStatusPedido(params: {
   status: OrderStatus
   estimatedTime?: number
   total?: number
-}): Promise<void> {
+}): Promise<{ ok: boolean; error?: string }> {
   const { phone, ...rest } = params
-  if (!phone || !isValidPhone(phone)) return
+  if (!phone || !isValidPhone(phone)) return { ok: false, error: 'Telefone inválido ou ausente' }
   const normalized = normalizePhone(phone)
 
   try {
     if (window.electronAPI?.isElectron) {
       await window.electronAPI.whatsapp.notifyOrder({ phone: normalized, ...rest })
-      return
+      return { ok: true }
     }
     await fetch(`${WPP_URL}/whatsapp/notify-order`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ phone: normalized, ...rest }),
     })
+    return { ok: true }
   } catch (err) {
-    // best-effort
+    const error = err instanceof Error ? err.message : String(err)
     console.error('[WPP] Falha ao notificar pedido:', err)
+    return { ok: false, error }
   }
 }

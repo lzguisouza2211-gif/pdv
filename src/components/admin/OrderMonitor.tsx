@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Pedido, PedidoStatus, FormaPagamento } from '@/types'
 import { avancarStatus } from '@/services/api/pedidos.service'
 import { notificarStatusPedido } from '@/services/whatsapp.service'
+import { useToast } from '@/hooks/use-toast'
 import { formatBRL } from '@/utils/calc'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -64,6 +65,7 @@ interface Props {
 export function OrderMonitor({ pedidos, onUpdate }: Props) {
   const [editando, setEditando] = useState<Pedido | null>(null)
   const [finalizadosAbertos, setFinalizadosAbertos] = useState(false)
+  const { toast } = useToast()
 
   async function handleAvancar(pedido: Pedido) {
     try {
@@ -75,13 +77,18 @@ export function OrderMonitor({ pedidos, onUpdate }: Props) {
           ? (pedido.tipoentrega === 'entrega' ? 'out_for_delivery' : 'ready_for_pickup')
           : null
       if (wppStatus) {
-        void notificarStatusPedido({
+        const result = await notificarStatusPedido({
           phone: pedido.phone,
           customerName: pedido.cliente,
           orderId: String(pedido.id),
           status: wppStatus,
           total: pedido.total,
         })
+        if (result.ok) {
+          toast({ title: '✅ WhatsApp enviado', description: `Notificação enviada para ${pedido.cliente}` })
+        } else {
+          toast({ title: '⚠️ WhatsApp não enviado', description: result.error, variant: 'destructive' })
+        }
       }
     } catch (err) {
       console.error(err)

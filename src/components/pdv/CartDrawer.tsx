@@ -159,12 +159,14 @@ export function CartDrawer({ open, onClose, onSuccess, deliveryFee }: Props) {
         total,
       })
 
-      void notificarStatusPedido({
+      notificarStatusPedido({
         phone,
         customerName: cliente.trim().split(' ')[0],
         orderId: String(pedidoId),
         status: 'confirmed',
         total,
+      }).then((r) => {
+        if (!r.ok) console.warn('[WPP] Confirmação não enviada:', r.error)
       })
 
       const nome = cliente.trim()
