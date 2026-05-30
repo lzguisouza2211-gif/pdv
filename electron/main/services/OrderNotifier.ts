@@ -54,11 +54,6 @@ export class OrderNotifier {
         { event: 'INSERT', schema: 'public', table: 'pedidos' },
         (payload) => { void this.onNewOrder(payload.new as PedidoRow) }
       )
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'pedidos' },
-        (payload) => { void this.onStatusChange(payload.old as PedidoRow, payload.new as PedidoRow) }
-      )
       .subscribe((status) => {
         console.log('[OrderNotifier] Canal realtime:', status)
         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
@@ -101,33 +96,4 @@ export class OrderNotifier {
     }
   }
 
-  private async onStatusChange(before: PedidoRow, after: PedidoRow): Promise<void> {
-    if (before.status === after.status) return
-    if (!after.phone || !isValidBrazilPhone(after.phone)) return
-
-    let status: 'preparing' | 'out_for_delivery' | 'ready_for_pickup' | 'cancelled' | null = null
-
-    if (after.status === 'Em preparo') {
-      status = 'preparing'
-    } else if (after.status === 'Finalizado') {
-      status = after.tipoentrega === 'entrega' ? 'out_for_delivery' : 'ready_for_pickup'
-    } else if (after.status === 'Cancelado') {
-      status = 'cancelled'
-    }
-
-    if (!status) return
-
-    try {
-      await getService().notifyOrder({
-        phone: after.phone,
-        customerName: after.cliente.split(' ')[0],
-        orderId: after.id,
-        status,
-        total: after.total,
-      })
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
-      console.error(`[OrderNotifier] Falha ao notificar status "${after.status}" pedido #${after.id}: ${msg}`)
-    }
-  }
 }

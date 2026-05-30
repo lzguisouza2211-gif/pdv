@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Pedido, PedidoStatus, FormaPagamento } from '@/types'
 import { avancarStatus } from '@/services/api/pedidos.service'
+import { notificarStatusPedido } from '@/services/whatsapp.service'
 import { formatBRL } from '@/utils/calc'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -68,6 +69,20 @@ export function OrderMonitor({ pedidos, onUpdate }: Props) {
     try {
       await avancarStatus(pedido)
       onUpdate()
+      const wppStatus =
+        pedido.status === 'Recebido' ? 'preparing'
+        : pedido.status === 'Em preparo'
+          ? (pedido.tipoentrega === 'entrega' ? 'out_for_delivery' : 'ready_for_pickup')
+          : null
+      if (wppStatus) {
+        void notificarStatusPedido({
+          phone: pedido.phone,
+          customerName: pedido.cliente,
+          orderId: String(pedido.id),
+          status: wppStatus,
+          total: pedido.total,
+        })
+      }
     } catch (err) {
       console.error(err)
     }

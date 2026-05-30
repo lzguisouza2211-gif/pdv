@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Pedido, PedidoStatus, FormaPagamento, PedidoItem, ItemCardapio, ExtraOption } from '@/types'
 import { editarPedido, cancelarPedido } from '@/services/api/pedidos.service'
+import { notificarStatusPedido } from '@/services/whatsapp.service'
 import { useCardapio } from '@/hooks/useCardapio'
 import { useToast } from '@/hooks/use-toast'
 import { formatBRL } from '@/utils/calc'
@@ -141,6 +142,22 @@ export function EditarPedidoModal({ pedido, onClose, onSaved }: Props) {
         total,
       })
       toast({ title: 'Pedido atualizado' })
+      if (status !== pedido.status) {
+        const wppStatus =
+          status === 'Em preparo' ? 'preparing'
+          : status === 'Finalizado'
+            ? (pedido.tipoentrega === 'entrega' ? 'out_for_delivery' : 'ready_for_pickup')
+            : null
+        if (wppStatus) {
+          void notificarStatusPedido({
+            phone: pedido.phone,
+            customerName: pedido.cliente,
+            orderId: String(pedido.id),
+            status: wppStatus,
+            total,
+          })
+        }
+      }
       onSaved()
       onClose()
     } catch (err) {
@@ -159,6 +176,13 @@ export function EditarPedidoModal({ pedido, onClose, onSaved }: Props) {
       toast({
         title: 'Pedido cancelado',
         description: pedido.phone ? 'Cliente notificado via WhatsApp' : undefined,
+      })
+      void notificarStatusPedido({
+        phone: pedido.phone,
+        customerName: pedido.cliente,
+        orderId: String(pedido.id),
+        status: 'cancelled',
+        total: pedido.total,
       })
       setConfirmCancel(false)
       onSaved()
