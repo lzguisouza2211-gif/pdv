@@ -98,6 +98,21 @@ function setupAutoUpdater(): void {
   setTimeout(() => autoUpdater.checkForUpdates(), 5_000)
 }
 
+// Electron 33 (Chromium 130) doesn't trust GTS Root R4 cross-signed by GlobalSign Root CA,
+// which Supabase's cert started using after April 2026. Allow the cert for supabase.co only.
+app.on('certificate-error', (event, _webContents, url, _error, certificate, callback) => {
+  const isSupabase = url.includes('supabase.co')
+  const certForSupabase =
+    certificate.subjectName?.includes('supabase.co') ||
+    certificate.issuerName?.includes('Google Trust Services')
+  if (isSupabase && certForSupabase) {
+    event.preventDefault()
+    callback(true)
+  } else {
+    callback(false)
+  }
+})
+
 app.whenReady().then(async () => {
   // ── IPC geral (status dos backends) ────────────────────────────────────────
   registerIpcHandlers(processManager)
