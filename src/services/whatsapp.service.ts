@@ -45,6 +45,7 @@ export async function notificarStatusPedido(params: {
   status: OrderStatus
   estimatedTime?: number
   total?: number
+  items?: string[]
 }): Promise<{ ok: boolean; error?: string }> {
   const { phone, ...rest } = params
   if (!phone || !isValidPhone(phone)) return { ok: false, error: 'Telefone inválido ou ausente' }

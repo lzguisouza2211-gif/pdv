@@ -88,6 +88,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
       status: string
       estimatedTime?: number
       total?: number
+      items?: string[]
     }): Promise<{ ok: boolean }> =>
       ipcRenderer.invoke('whatsapp:notify-order', payload),
 

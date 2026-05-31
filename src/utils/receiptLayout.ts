@@ -75,12 +75,30 @@ export function buildProductionReceipt(pedido: Pedido): string {
   lines.push('ITENS:')
   lines.push(SEP)
 
+  let total = 0
   for (const item of pedido.itens) {
-    lines.push(`- ${item.quantidade}x ${item.nome}`)
+    const adicionaisSum = (item.adicionais ?? []).reduce((s, a) => s + a.preco * (a.qty ?? 1), 0)
+    const basePreco = item.preco - adicionaisSum
+    const itemTotal = item.preco * item.quantidade
+    total += itemTotal
+    lines.push(pad(`- ${item.quantidade}x ${item.nome}`, fmtR$(basePreco * item.quantidade)))
     for (const r of item.retirados) lines.push(`  (SEM ${r.nome.toUpperCase()})`)
-    for (const a of item.adicionais) lines.push(`  (COM ${a.nome.toUpperCase()})`)
+    for (const a of item.adicionais ?? []) {
+      const aqty = a.qty ?? 1
+      const addTotal = a.preco * aqty * item.quantidade
+      const label = aqty > 1 ? `${aqty}x ${a.nome}` : a.nome
+      lines.push(pad(`  (COM ${label.toUpperCase()})`, fmtR$(addTotal)))
+    }
+    if (item.observacoes) lines.push(`  Obs: ${item.observacoes}`)
   }
 
+  lines.push(SEP)
+  if (pedido.taxa_entrega > 0) {
+    lines.push(pad('SUBTOTAL:', fmtR$(total - pedido.taxa_entrega)))
+    lines.push(pad('TAXA ENTREGA:', fmtR$(pedido.taxa_entrega)))
+    lines.push(SEP)
+  }
+  lines.push(pad('TOTAL:', fmtR$(pedido.total)))
   lines.push(DSEP)
   lines.push('')
   lines.push('')

@@ -5,6 +5,21 @@ import { supabase } from '@/services/supabaseClient'
 import { Pedido } from '@/types'
 import { playNewOrderSound } from '@/utils/notificationSound'
 import { notificarStatusPedido } from '@/services/whatsapp.service'
+import type { PedidoItem } from '@/types'
+
+function formatItemsForWpp(itens: PedidoItem[]): string[] {
+  const lines: string[] = []
+  for (const item of itens) {
+    lines.push(`${item.quantidade}x ${item.nome}`)
+    for (const r of item.retirados) lines.push(`  ✂️ Sem ${r.nome}`)
+    for (const a of item.adicionais) {
+      const qty = (a.qty ?? 1) > 1 ? `${a.qty}x ` : ''
+      lines.push(`  ➕ ${qty}${a.nome}`)
+    }
+    if (item.observacoes) lines.push(`  📝 ${item.observacoes}`)
+  }
+  return lines
+}
 
 // Polling de segurança a cada 8s — cobre quando o canal Realtime cai ou não está habilitado
 const HEARTBEAT_MS = 8_000
@@ -52,6 +67,7 @@ export function usePedidos() {
               orderId: String(pedido.id),
               status: 'confirmed',
               total: pedido.total,
+              items: formatItemsForWpp(pedido.itens),
             })
           }
         }
