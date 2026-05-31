@@ -193,7 +193,19 @@ export class BaileysClient extends EventEmitter {
     if (!this.socket || this.state !== 'connected') {
       throw new Error(`WhatsApp não conectado (estado: ${this.state})`)
     }
-    const result = await this.socket.sendMessage(jid, { text })
+
+    // Resolve o JID canônico antes de enviar — necessário porque números brasileiros
+    // podem estar cadastrados no WA em formato 12 ou 13 dígitos (553599876408 vs
+    // 5535999876408). Mandar para o formato errado faz o servidor aceitar mas
+    // a mensagem nunca chega.
+    const results = await this.socket.onWhatsApp(jid)
+    const info = results?.[0]
+    if (!info?.exists) {
+      throw new Error(`Número não encontrado no WhatsApp: ${jid}`)
+    }
+    const resolvedJid = info.jid
+
+    const result = await this.socket.sendMessage(resolvedJid, { text })
     logger.info('[WPP]', `sendMessage result: ${JSON.stringify(result?.key ?? 'undefined')}`)
   }
 
