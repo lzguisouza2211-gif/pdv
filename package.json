@@ -1,5 +1,7 @@
 {
   "name": "pdv-lanchonete-luizao",
+  "description": "Sistema PDV para Luizão Lanches",
+  "author": "Guilherme",
   "private": true,
   "version": "1.0.17",
   "type": "module",
