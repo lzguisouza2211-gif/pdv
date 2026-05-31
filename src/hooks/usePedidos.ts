@@ -4,6 +4,7 @@ import { fetchPedidosDoDia } from '@/services/api/pedidos.service'
 import { supabase } from '@/services/supabaseClient'
 import { Pedido } from '@/types'
 import { playNewOrderSound } from '@/utils/notificationSound'
+import { notificarStatusPedido } from '@/services/whatsapp.service'
 
 // Polling de segurança a cada 8s — cobre quando o canal Realtime cai ou não está habilitado
 const HEARTBEAT_MS = 8_000
@@ -40,8 +41,19 @@ export function usePedidos() {
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'pedidos' },
         (payload) => {
-          addPedido(payload.new as Pedido)
+          const pedido = payload.new as Pedido
+          addPedido(pedido)
           playNewOrderSound()
+          // Envia confirmação via IPC (roda no Electron, independente de onde o pedido veio)
+          if (pedido.phone) {
+            void notificarStatusPedido({
+              phone: pedido.phone,
+              customerName: pedido.cliente.split(' ')[0],
+              orderId: String(pedido.id),
+              status: 'confirmed',
+              total: pedido.total,
+            })
+          }
         }
       )
       .on(

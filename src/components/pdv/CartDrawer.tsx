@@ -5,7 +5,6 @@ import { normalizePedidoPayload, gerarCartKey } from '@/utils/pedido'
 import { validarTelefoneBrasileiro, formatarTelefone } from '@/utils/validation'
 import { formatBRL, calcTotal, calcTroco, calcItemPrice } from '@/utils/calc'
 import { criarPedido } from '@/services/api/pedidos.service'
-import { notificarStatusPedido } from '@/services/whatsapp.service'
 import { buscarClientePorTelefone, saveClienteSession, getClienteSession } from '@/services/api/clientes.service'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -157,16 +156,6 @@ export function CartDrawer({ open, onClose, onSuccess, deliveryFee }: Props) {
         troco: trocoVal,
         taxa_entrega: taxa,
         total,
-      })
-
-      notificarStatusPedido({
-        phone,
-        customerName: cliente.trim().split(' ')[0],
-        orderId: String(pedidoId),
-        status: 'confirmed',
-        total,
-      }).then((r) => {
-        if (!r.ok) console.warn('[WPP] Confirmação não enviada:', r.error)
       })
 
       const nome = cliente.trim()
