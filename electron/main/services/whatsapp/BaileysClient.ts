@@ -27,8 +27,12 @@ import { app } from 'electron'
 import pino from 'pino'
 
 
-// Logger silencioso para o Baileys (muito verbose por padrão)
-const baileysLogger = pino({ level: 'silent' })
+import { logger } from '../../logger.js'
+
+// Logger do Baileys — escreve warnings/errors no pdv.log
+const baileysLogger = pino({
+  level: 'warn',
+}, pino.destination({ write: (msg: string) => logger.warn('[BAILEYS]', msg) }))
 
 function getAuthDir(): string {
   // Sempre usa userData — evita que o electronmon detecte mudanças nos arquivos de sessão
@@ -49,7 +53,7 @@ async function fetchVersionSafe(): Promise<[number, number, number]> {
     ])
     return result.version as [number, number, number]
   } catch {
-    console.warn('[WPP] fetchLatestBaileysVersion falhou/timeout — usando versão embutida')
+    logger.warn('[WPP]', 'fetchLatestBaileysVersion falhou/timeout — usando versão embutida')
     return [2, 3000, 1035194821]
   }
 }
@@ -78,7 +82,7 @@ export class BaileysClient extends EventEmitter {
     const { state, saveCreds } = await useMultiFileAuthState(authDir)
     const version = await fetchVersionSafe()
 
-    console.log(`[WPP] Iniciando conexão (Baileys ${version.join('.')})…`)
+    logger.info('[WPP]', `Iniciando conexão com versão WA ${version.join('.')}`)
 
     this.socket = makeWASocket({
       version: version,
@@ -97,6 +101,11 @@ export class BaileysClient extends EventEmitter {
 
     this.socket.ev.on('creds.update', saveCreds)
     this.socket.ev.on('connection.update', (u) => this.onConnectionUpdate(u))
+    this.socket.ev.on('messages.update', (updates) => {
+      for (const u of updates) {
+        logger.info('[WPP]', `message ACK id=${u.key.id} status=${u.update.status}`)
+      }
+    })
   }
 
   private closeSocket(): void {
@@ -184,7 +193,8 @@ export class BaileysClient extends EventEmitter {
     if (!this.socket || this.state !== 'connected') {
       throw new Error(`WhatsApp não conectado (estado: ${this.state})`)
     }
-    await this.socket.sendMessage(jid, { text })
+    const result = await this.socket.sendMessage(jid, { text })
+    logger.info('[WPP]', `sendMessage result: ${JSON.stringify(result?.key ?? 'undefined')}`)
   }
 
   // ─── Status público ───────────────────────────────────────────────────────
