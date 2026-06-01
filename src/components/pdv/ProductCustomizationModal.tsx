@@ -9,14 +9,14 @@ import { fetchAdicionaisByProduct, fetchRetiradosByProduct } from '@/services/ap
 
 const MAX_QTY = 5
 
-const CATEGORY_STYLE: Record<string, { emoji: string; from: string; to: string }> = {
-  Lanches:  { emoji: '🍔', from: 'from-orange-400', to: 'to-amber-300' },
-  Macarrão: { emoji: '🍝', from: 'from-yellow-400', to: 'to-amber-300' },
-  Porções:  { emoji: '🍟', from: 'from-green-400',  to: 'to-emerald-400' },
-  Omeletes: { emoji: '🍳', from: 'from-yellow-300', to: 'to-orange-300' },
-  Bebidas:  { emoji: '🥤', from: 'from-blue-400',   to: 'to-cyan-400' },
-  Cervejas: { emoji: '🍺', from: 'from-amber-400',  to: 'to-yellow-300' },
-  Doces:    { emoji: '🍰', from: 'from-pink-400',   to: 'to-rose-400' },
+const CATEGORY_STYLE: Record<string, { emoji: string; tint: string }> = {
+  Lanches:  { emoji: '🍔', tint: '#FFE8D6' },
+  Macarrão: { emoji: '🍝', tint: '#FEF0C7' },
+  Porções:  { emoji: '🍟', tint: '#DCF6E3' },
+  Omeletes: { emoji: '🍳', tint: '#FFEFD0' },
+  Bebidas:  { emoji: '🥤', tint: '#DEF0FB' },
+  Cervejas: { emoji: '🍺', tint: '#FEF3CC' },
+  Doces:    { emoji: '🍰', tint: '#FCE3EC' },
 }
 
 interface Props {
@@ -82,6 +82,16 @@ export function ProductCustomizationModal({
   const [addOpen, setAddOpen] = useState(false)
   const [remOpen, setRemOpen] = useState(false)
 
+  // Bloqueia scroll do fundo quando o sheet está aberto (mobile)
+  useEffect(() => {
+    if (open) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => { document.body.style.overflow = '' }
+  }, [open])
+
   useEffect(() => {
     if (!item || !open) return
     setAddQtys(initialAddQtys ?? {})
@@ -135,7 +145,7 @@ export function ProductCustomizationModal({
 
   if (!item || !open) return null
 
-  const style = CATEGORY_STYLE[item.categoria] ?? { emoji: '🍽️', from: 'from-slate-400', to: 'to-slate-300' }
+  const style = CATEGORY_STYLE[item.categoria] ?? { emoji: '🍽️', tint: '#F0F0F0' }
 
   return (
     <>
@@ -147,27 +157,50 @@ export function ProductCustomizationModal({
 
       {/* Bottom sheet */}
       <div className="fixed bottom-0 left-0 right-0 z-50 flex flex-col bg-background rounded-t-3xl max-h-[88vh] shadow-2xl sheet-bottom">
-        {/* Banner da categoria */}
-        <div className={`relative bg-gradient-to-br ${style.from} ${style.to} h-32 rounded-t-3xl flex-shrink-0 flex items-end`}>
-          <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-6xl drop-shadow">
-            {style.emoji}
-          </span>
-          <button
-            onClick={onClose}
-            className="absolute top-3 right-3 bg-black/25 hover:bg-black/40 rounded-full p-1.5 transition-colors"
-          >
-            <X className="h-4 w-4 text-white" />
-          </button>
-          <div className="px-5 pb-4 w-full">
-            <h2 className="text-white font-extrabold text-xl capitalize leading-tight drop-shadow-sm">
-              {item.nome}
-            </h2>
-            <p className="text-white/80 text-sm font-medium">{formatBRL(item.preco)}</p>
+        {/* Grab handle */}
+        <div style={{ width: 40, height: 5, borderRadius: 999, background: '#E0E2E7', margin: '10px auto 0', flexShrink: 0 }} />
+
+        {/* Header com emoji thumb */}
+        <div className="flex-shrink-0 px-5 pt-3 pb-2">
+          <div className="flex justify-end mb-2">
+            <button
+              onClick={onClose}
+              style={{
+                border: 'none', background: '#F6F6F8', width: 32, height: 32,
+                borderRadius: 999, cursor: 'pointer', color: '#6B7280',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}
+            >
+              <X className="h-4 w-4" />
+            </button>
           </div>
+          <div className="flex justify-center mb-4">
+            <div style={{
+              width: 110, height: 110, borderRadius: 20, background: style.tint,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              position: 'relative', overflow: 'hidden',
+              boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.04)',
+            }}>
+              <div style={{
+                position: 'absolute', inset: 0,
+                background: 'radial-gradient(120% 90% at 30% 20%, rgba(255,255,255,0.55), transparent 60%)',
+              }} />
+              <span style={{ fontSize: 54, lineHeight: 1, filter: 'drop-shadow(0 2px 3px rgba(0,0,0,0.12))', position: 'relative' }}>
+                {style.emoji}
+              </span>
+            </div>
+          </div>
+          <h2 style={{ fontWeight: 800, fontSize: 20, color: '#16202E', marginBottom: 2, lineHeight: 1.2 }}>
+            {item.nome}
+          </h2>
+          {item.descricao && (
+            <p style={{ color: '#6B7280', fontSize: 13.5, lineHeight: 1.4, marginBottom: 6 }}>{item.descricao}</p>
+          )}
+          <p style={{ fontWeight: 800, color: '#16202E', fontSize: 17 }}>{formatBRL(item.preco)}</p>
         </div>
 
         {/* Conteúdo */}
-        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3" style={{ overscrollBehavior: 'contain' }}>
           {loading ? (
             <p className="text-center py-6 text-muted-foreground">Carregando opções…</p>
           ) : (

@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { PixKeyDisplay } from './PixKeyDisplay'
 import { ProductCustomizationModal } from './ProductCustomizationModal'
-import { X, Minus, Plus, ShoppingCart, Pencil, Trash2 } from 'lucide-react'
+import { X, Minus, Plus, Pencil, Trash2 } from 'lucide-react'
 
 const CUSTOM_CATS = new Set(['Lanches', 'Macarrão', 'Omeletes'])
 
@@ -65,6 +65,16 @@ export function CartDrawer({ open, onClose, onSuccess, deliveryFee }: Props) {
   const submitting = useRef(false)
   const phoneRef = useRef(phone)
   useEffect(() => { phoneRef.current = phone }, [phone])
+
+  // Bloqueia scroll do fundo quando o sheet está aberto (mobile)
+  useEffect(() => {
+    if (open) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => { document.body.style.overflow = '' }
+  }, [open])
 
   useEffect(() => {
     if (!open || phoneRef.current) return
@@ -229,33 +239,41 @@ export function CartDrawer({ open, onClose, onSuccess, deliveryFee }: Props) {
     <>
       <div className="drawer-overlay fixed inset-0 z-40 bg-black/50" onClick={onClose} />
 
-      <div className="drawer-panel fixed right-0 top-0 z-50 h-full w-full max-w-md bg-background shadow-xl flex flex-col">
-        {/* Header */}
-        <div className="bg-primary text-primary-foreground px-4 pt-4 pb-4 flex-shrink-0">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <ShoppingCart className="h-5 w-5" />
-              <h2 className="font-extrabold text-lg">Carrinho</h2>
+      <div className="sheet-bottom fixed bottom-0 left-0 right-0 z-50 max-h-[92vh] rounded-t-3xl bg-background shadow-2xl flex flex-col">
+        {/* Grab handle + header */}
+        <div className="flex-shrink-0">
+          <div style={{ width: 40, height: 5, borderRadius: 999, background: '#E0E2E7', margin: '10px auto 0' }} />
+          <div className="flex items-center justify-between px-5 py-3">
+            <div>
+              <h2 style={{ fontWeight: 800, fontSize: 20, color: '#16202E' }}>Sua sacola</h2>
+              {items.length > 0 && (
+                <p style={{ color: '#6B7280', fontSize: 13, marginTop: 2 }}>
+                  {items.reduce((s, i) => s + i.qty, 0)} item(s) · {formatBRL(subtotal)}
+                </p>
+              )}
             </div>
             <button
               onClick={onClose}
-              className="p-1.5 rounded-full hover:bg-primary-foreground/20 transition-colors"
+              style={{
+                border: 'none', background: '#F6F6F8', width: 32, height: 32,
+                borderRadius: 999, cursor: 'pointer', color: '#6B7280',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}
             >
-              <X className="h-5 w-5" />
+              <X className="h-4 w-4" />
             </button>
           </div>
-          {items.length > 0 && (
-            <p className="text-primary-foreground/70 text-sm mt-1">
-              {items.reduce((s, i) => s + i.qty, 0)} item(s) · {formatBRL(subtotal)}
-            </p>
-          )}
         </div>
 
-        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3" style={{ overscrollBehavior: 'contain' }}>
           {/* Items */}
           {items.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-muted-foreground gap-3">
-              <ShoppingCart className="h-12 w-12 opacity-30" />
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" style={{ opacity: 0.3 }}>
+                <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" stroke="#6B7280" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <line x1="3" y1="6" x2="21" y2="6" stroke="#6B7280" strokeWidth="2" strokeLinecap="round"/>
+                <path d="M16 10a4 4 0 01-8 0" stroke="#6B7280" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
               <p className="font-medium">Carrinho vazio</p>
             </div>
           ) : (
