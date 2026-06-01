@@ -42,10 +42,10 @@ export async function fetchPedidos(
   let query = supabase.from('pedidos').select('*').order('created_at', { ascending: false })
 
   if (filters.startDate) {
-    query = query.gte('created_at', `${filters.startDate}T00:00:00`)
+    query = query.gte('created_at', new Date(`${filters.startDate}T00:00:00-03:00`).toISOString())
   }
   if (filters.endDate) {
-    query = query.lte('created_at', `${filters.endDate}T23:59:59`)
+    query = query.lte('created_at', new Date(`${filters.endDate}T23:59:59-03:00`).toISOString())
   }
   if (filters.status) {
     query = query.eq('status', filters.status)

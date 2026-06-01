@@ -41,12 +41,14 @@ export function Financeiro() {
   const [period, setPeriod] = useState<Period>('mes')
   const [dailyData, setDailyData] = useState<DailyData[]>([])
   const [loading, setLoading] = useState(true)
+  const [erro, setErro] = useState<string | null>(null)
   const [caixaFechado, setCaixaFechado] = useState<boolean | null>(null)
 
   const hoje = format(new Date(), 'yyyy-MM-dd')
 
   const loadData = useCallback(async (p: Period) => {
     setLoading(true)
+    setErro(null)
     try {
       const { start, end } = getDateRange(p)
       const todosPedidos = await fetchPedidos({ startDate: start, endDate: end })
@@ -69,7 +71,9 @@ export function Financeiro() {
       setDailyData(
         Array.from(map.values()).sort((a, b) => a.dia.localeCompare(b.dia))
       )
-    } catch (err) {
+    } catch (err: unknown) {
+      const e = err as Record<string, unknown>
+      setErro((e?.message as string) ?? 'Erro ao carregar dados financeiros.')
     } finally {
       setLoading(false)
     }
@@ -176,6 +180,8 @@ export function Financeiro() {
 
       {loading ? (
         <p className="text-muted-foreground text-sm">Carregando…</p>
+      ) : erro ? (
+        <p className="text-destructive text-sm font-medium">{erro}</p>
       ) : (
         <>
           {/* KPIs principais */}
