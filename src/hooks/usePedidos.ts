@@ -33,7 +33,6 @@ export function usePedidos() {
       const data = await fetchPedidosDoDia()
       setPedidos(data)
     } catch (err) {
-      console.error('Erro ao carregar pedidos', err)
     }
   }, [setPedidos])
 

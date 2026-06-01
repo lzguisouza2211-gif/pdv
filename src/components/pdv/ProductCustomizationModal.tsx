@@ -110,7 +110,7 @@ export function ProductCustomizationModal({
         setAdicionais(ads)
         setRetiradas(rets.length > 0 ? rets : item.ingredientes)
       })
-      .catch(console.error)
+      .catch(() => {})
       .finally(() => setLoading(false))
   }, [item, open])
 

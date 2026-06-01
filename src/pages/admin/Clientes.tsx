@@ -26,7 +26,6 @@ export function Clientes() {
       setClientes(result.data)
       setCount(result.count)
     } catch (err) {
-      console.error(err)
     } finally {
       setLoading(false)
     }

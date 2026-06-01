@@ -13,7 +13,6 @@ export function IngredientesIndisponiveisPanel() {
       const data = await fetchIngredientesIndisponiveis()
       setIngredientes(data)
     } catch (err) {
-      console.error(err)
     } finally {
       setLoading(false)
     }
@@ -30,7 +29,6 @@ export function IngredientesIndisponiveisPanel() {
         )
       )
     } catch (err) {
-      console.error(err)
     }
   }
 

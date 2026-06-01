@@ -85,7 +85,6 @@ export function useCaixaAutomatico(userId: string | undefined) {
             })
           }
         } catch (err) {
-          console.error('Erro ao fechar caixa automático:', err)
         }
       }
 

@@ -54,7 +54,6 @@ export function SuccessModal({
           vincularClienteAoPedido(pedidoId, clienteEncontrado.id),
         ])
       } catch (err) {
-        console.error('[SuccessModal] erro ao registrar pedido no cliente:', err)
       }
     })()
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -74,7 +73,6 @@ export function SuccessModal({
       saveClienteSession(phoneCliente, nomeCliente)
       setSaveState('saved')
     } catch (err) {
-      console.error('[SuccessModal] erro ao salvar cliente:', err)
       if (mountedRef.current) setSaveState('idle')
     }
   }

@@ -161,7 +161,6 @@ export function EditarPedidoModal({ pedido, onClose, onSaved }: Props) {
       onSaved()
       onClose()
     } catch (err) {
-      console.error(err)
       toast({ title: 'Erro ao salvar', variant: 'destructive' })
     } finally {
       setSalvando(false)
@@ -188,7 +187,6 @@ export function EditarPedidoModal({ pedido, onClose, onSaved }: Props) {
       onSaved()
       onClose()
     } catch (err) {
-      console.error(err)
       toast({ title: 'Erro ao cancelar pedido', variant: 'destructive' })
     } finally {
       setCancelando(false)

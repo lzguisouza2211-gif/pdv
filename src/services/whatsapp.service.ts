@@ -33,7 +33,6 @@ export async function enviarNotificacaoWpp(
     })
   } catch (err) {
     // Notificação é best-effort — nunca bloqueia o fluxo do pedido
-    console.error('[WPP] Falha ao enviar mensagem:', err)
   }
 }
 
@@ -64,7 +63,6 @@ export async function notificarStatusPedido(params: {
     return { ok: true }
   } catch (err) {
     const error = err instanceof Error ? err.message : String(err)
-    console.error('[WPP] Falha ao notificar pedido:', err)
     return { ok: false, error }
   }
 }

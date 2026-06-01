@@ -17,7 +17,6 @@ export function PrintButton({ pedido }: Props) {
     try {
       await printJob(pedido, 'ambos')
     } catch (err) {
-      console.error('Falha na impressão', err)
     } finally {
       setPrinting(false)
     }

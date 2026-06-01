@@ -12,7 +12,6 @@ export function useStoreStatus() {
       const data = await fetchStoreStatus()
       setStatus(data)
     } catch (err) {
-      console.error('Erro ao carregar status da loja', err)
     } finally {
       setLoading(false)
     }

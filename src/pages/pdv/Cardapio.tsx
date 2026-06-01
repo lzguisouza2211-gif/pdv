@@ -43,7 +43,6 @@ export function Cardapio() {
   )
   const [activeCat, setActiveCat] = useState<string | null>(null)
   const [catDropdownOpen, setCatDropdownOpen] = useState(false)
-  const [fav, setFav] = useState(false)
   const catRefs = useRef<Record<string, HTMLDivElement | null>>({})
   const pillRefs = useRef<Record<string, HTMLButtonElement | null>>({})
 
@@ -176,22 +175,18 @@ export function Cardapio() {
         }} />
 
         <div style={{ position: 'absolute', top: 16, right: 16, zIndex: 3 }}>
-          <button
-            onClick={() => setFav((f) => !f)}
-            style={{
-              width: 40, height: 40, borderRadius: 999, border: 'none', cursor: 'pointer',
-              background: 'rgba(15,20,30,0.45)', backdropFilter: 'blur(6px)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              WebkitTapHighlightColor: 'transparent',
-            }}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill={fav ? '#F4581C' : 'none'}>
-              <path
-                d="M12 21s-7.5-4.6-10-9.3C.3 8.4 1.7 4.5 5.3 4.5c2.1 0 3.4 1.2 4.2 2.3l.5.7.5-.7c.8-1.1 2.1-2.3 4.2-2.3 3.6 0 5 3.9 3.3 7.2C19.5 16.4 12 21 12 21z"
-                stroke={fav ? '#F4581C' : '#fff'} strokeWidth="2" strokeLinejoin="round"
-              />
+          <div style={{
+            width: 40, height: 40, borderRadius: 999,
+            background: 'rgba(15,20,30,0.45)', backdropFilter: 'blur(6px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            {/* Hambúrguer icon */}
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+              <path d="M12 4C7.6 4 4 6.5 4 9.5h16C20 6.5 16.4 4 12 4z" fill="#fff" opacity="0.9"/>
+              <rect x="3" y="11" width="18" height="2.5" rx="1.25" fill="#fff" opacity="0.9"/>
+              <path d="M4 15.5h16v.5a3.5 3.5 0 01-3.5 3.5h-9A3.5 3.5 0 014 16v-.5z" fill="#fff" opacity="0.9"/>
             </svg>
-          </button>
+          </div>
         </div>
 
         <div style={{ position: 'absolute', top: 60, left: 0, right: 0, textAlign: 'center', zIndex: 2 }}>

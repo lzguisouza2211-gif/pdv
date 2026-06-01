@@ -91,7 +91,6 @@ export function OrderMonitor({ pedidos, onUpdate }: Props) {
         }
       }
     } catch (err) {
-      console.error(err)
     }
   }
 

@@ -11,7 +11,6 @@ export function useDeliveryFee() {
       const value = await fetchDeliveryFee()
       setFee(value)
     } catch (err) {
-      console.error(err)
     } finally {
       setLoading(false)
     }

@@ -116,7 +116,6 @@ export function CartDrawer({ open, onClose, onSuccess, deliveryFee }: Props) {
         setClienteEncontrado(null)
       }
     } catch (err) {
-      console.error('[CartDrawer] erro no lookup de cliente:', err)
     }
   }
 
@@ -194,7 +193,6 @@ export function CartDrawer({ open, onClose, onSuccess, deliveryFee }: Props) {
       })
     } catch (err: unknown) {
       const e = err as Record<string, unknown>
-      console.error('Supabase error:', e?.code, e?.message, e?.details, e?.hint)
       setErrors({ submit: `Erro: ${e?.message ?? 'Tente novamente.'}` })
     } finally {
       setLoading(false)

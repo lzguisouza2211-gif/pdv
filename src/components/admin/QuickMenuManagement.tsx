@@ -24,7 +24,7 @@ export function QuickMenuManagement() {
   }
 
   useEffect(() => {
-    fetchCardapio().then(setItens).catch(console.error)
+    fetchCardapio().then(setItens).catch(() => {})
   }, [])
 
   async function handleToggleDisponivel(id: string, current: boolean) {
@@ -39,7 +39,6 @@ export function QuickMenuManagement() {
         description: !current ? 'Visível no cardápio' : 'Oculto do cardápio',
       })
     } catch (err) {
-      console.error(err)
       toast({ title: 'Erro ao atualizar produto', variant: 'destructive' })
     } finally {
       setToggling(null)
@@ -57,7 +56,6 @@ export function QuickMenuManagement() {
       setEditingPreco((prev) => { const n = { ...prev }; delete n[id]; return n })
       toast({ title: 'Preço atualizado' })
     } catch (err) {
-      console.error(err)
       toast({ title: 'Erro ao atualizar preço', variant: 'destructive' })
     }
   }

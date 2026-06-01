@@ -150,7 +150,6 @@ export function NovoPedido({ defaultCliente, lockTipoEntrega, onSuccess }: NovoP
       setCartOpen(false)
       onSuccess?.()
     } catch (err) {
-      console.error(err)
       toast({ title: 'Erro ao criar pedido', variant: 'destructive' })
     } finally {
       setEnviando(false)

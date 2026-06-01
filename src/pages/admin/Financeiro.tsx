@@ -70,7 +70,6 @@ export function Financeiro() {
         Array.from(map.values()).sort((a, b) => a.dia.localeCompare(b.dia))
       )
     } catch (err) {
-      console.error(err)
     } finally {
       setLoading(false)
     }

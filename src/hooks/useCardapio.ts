@@ -34,7 +34,6 @@ export function useCardapio() {
       setError(null)
     } catch (err) {
       setError('Erro ao carregar cardápio')
-      console.error(err)
     } finally {
       setLoading(false)
     }

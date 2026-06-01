@@ -17,7 +17,7 @@ export function GestaoCardapio() {
   const [ingredientesOpen, setIngredientesOpen] = useState(false)
 
   useEffect(() => {
-    fetchDeliveryFee().then(setTaxaEntrega).catch(console.error)
+    fetchDeliveryFee().then(setTaxaEntrega).catch(() => {})
   }, [])
 
   async function handleSaveTaxa() {

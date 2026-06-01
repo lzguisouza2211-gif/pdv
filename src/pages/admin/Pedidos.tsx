@@ -44,7 +44,6 @@ export function Pedidos() {
       })
       setPedidos(data)
     } catch (err) {
-      console.error(err)
     } finally {
       setLoading(false)
     }
