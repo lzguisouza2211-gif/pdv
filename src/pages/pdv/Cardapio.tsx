@@ -18,12 +18,7 @@ import { formatBRL } from '@/utils/calc'
 const CATEGORIA_ORDER = ['Lanches', 'Macarrão', 'Porções', 'Omeletes', 'Bebidas', 'Cervejas', 'Doces']
 const CUSTOM_CATS = new Set(['Lanches', 'Macarrão', 'Omeletes'])
 
-// Esquenta da Copa — seleção curada de itens ideais para assistir ao jogo.
-// Combina bem: x-bacon ou x-tudo com Brahma/Skol lata, mineirão pra torcida grande,
-// batata c/ queijo e bacon ou pernil e cebola pra dividir na mesa.
-// São itens reais do cardápio; exibidos aqui como destaque temático, sem alterar preços.
-const COPA_ITEM_NAMES = ['x-bacon', 'x-tudo', 'mineirão', 'batata c/ queijo e bacon', 'pernil e cebola']
-const COPA_ITEM_NAMES_SET = new Set(COPA_ITEM_NAMES)
+const COPA_ITEM_NAMES_SET = new Set(['x-bacon', 'x-tudo', 'mineirão', 'batata c/ queijo e bacon', 'pernil e cebola'])
 
 const CATEGORIA_META: Record<string, { emoji: string; tint: string }> = {
   Lanches:  { emoji: '🍔', tint: '#FFE8D6' },
@@ -84,12 +79,6 @@ export function Cardapio() {
       .slice(0, 5),
   [itens])
 
-  // Itens Copa na ordem definida, só os disponíveis
-  const copaItems = useMemo(() =>
-    COPA_ITEM_NAMES
-      .map((nome) => itens.find((i) => i.nome === nome && i.ativo))
-      .filter((i): i is ItemCardapio => !!i),
-  [itens])
 
   // Scroll listener — detecta categoria ativa conforme o scroll
   // (mais confiável que IntersectionObserver no mobile)
