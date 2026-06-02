@@ -41,6 +41,8 @@ function getAuthDir(): string {
 
 const MAX_RETRIES = 5
 const RETRY_DELAY_MS = 5_000
+const LONG_RETRY_DELAY_MS = 60_000
+const WATCHDOG_INTERVAL_MS = 45_000
 const FETCH_VERSION_TIMEOUT_MS = 8_000
 
 async function fetchVersionSafe(): Promise<[number, number, number]> {
@@ -65,6 +67,7 @@ export class BaileysClient extends EventEmitter {
   private state: ConnectionState = 'disconnected'
   private retryCount = 0
   private retryTimer: ReturnType<typeof setTimeout> | null = null
+  private watchdogTimer: ReturnType<typeof setInterval> | null = null
   private connectedAt: number | null = null
   private currentQR: string | null = null
   private phoneNumber: string | null = null
@@ -124,6 +127,29 @@ export class BaileysClient extends EventEmitter {
     }
   }
 
+  private startWatchdog(): void {
+    this.stopWatchdog()
+    this.watchdogTimer = setInterval(() => {
+      if (this.state !== 'connected' || !this.socket || this.retryTimer) return
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const ws = (this.socket as any).ws
+      if (ws && ws.readyState !== 1 /* WebSocket.OPEN */) {
+        logger.warn('[WPP]', 'Watchdog: socket morto detectado — forçando reconexão')
+        this.state = 'disconnected'
+        this.connectedAt = null
+        this.retryCount = 0
+        void this.connect()
+      }
+    }, WATCHDOG_INTERVAL_MS)
+  }
+
+  private stopWatchdog(): void {
+    if (this.watchdogTimer) {
+      clearInterval(this.watchdogTimer)
+      this.watchdogTimer = null
+    }
+  }
+
   // ─── Tratamento de eventos ────────────────────────────────────────────────
 
   private onConnectionUpdate(update: Partial<BaileysConnState>): void {
@@ -144,9 +170,12 @@ export class BaileysClient extends EventEmitter {
       this.phoneNumber = this.parsePhoneFromJid(this.socket?.user?.id ?? null)
       console.log(`[WPP] Conectado ao WhatsApp com sucesso! Número: ${this.phoneNumber ?? 'desconhecido'}`)
       this.emit('connected')
+      this.startWatchdog()
     }
 
     if (connection === 'close') {
+      this.stopWatchdog()
+
       if (this._intentionalClose) {
         this._intentionalClose = false
         return
@@ -166,7 +195,6 @@ export class BaileysClient extends EventEmitter {
       if (statusCode === DisconnectReason.loggedOut) {
         console.warn('[WPP] Sessão inválida — limpando credenciais para novo QR')
         this.emit('logout')
-        // Credenciais velhas causariam loop infinito; limpa e reabre para mostrar QR
         void this.clearAuthFiles().then(() => {
           this.retryTimer = setTimeout(() => this.connect(), 1_000)
         })
@@ -175,14 +203,15 @@ export class BaileysClient extends EventEmitter {
 
       if (this.retryCount < MAX_RETRIES) {
         this.retryCount++
-        const delay = RETRY_DELAY_MS * this.retryCount // backoff progressivo
-        console.log(
-          `[WPP] Reconectando em ${delay / 1000}s… (${this.retryCount}/${MAX_RETRIES})`
-        )
+        const delay = RETRY_DELAY_MS * this.retryCount
+        console.log(`[WPP] Reconectando em ${delay / 1000}s… (${this.retryCount}/${MAX_RETRIES})`)
         this.retryTimer = setTimeout(() => this.connect(), delay)
       } else {
-        console.error('[WPP] Máximo de tentativas atingido. Use o painel para reconectar.')
+        // Após esgotar tentativas rápidas, continua tentando a cada 60s indefinidamente
+        console.warn('[WPP] Tentativas rápidas esgotadas. Próxima tentativa em 60s...')
         this.emit('max_retries')
+        this.retryCount = 0
+        this.retryTimer = setTimeout(() => this.connect(), LONG_RETRY_DELAY_MS)
       }
     }
   }
@@ -253,6 +282,7 @@ export class BaileysClient extends EventEmitter {
 
   async disconnect(): Promise<void> {
     this.cancelRetry()
+    this.stopWatchdog()
     this.retryCount = MAX_RETRIES
     // Seta _intentionalClose ANTES do logout para evitar que o evento loggedOut
     // acione a limpeza de credenciais e reconexão automática
