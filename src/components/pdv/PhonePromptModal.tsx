@@ -2,8 +2,6 @@ import { useState } from 'react'
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Smartphone } from 'lucide-react'
 import { validarTelefoneBrasileiro, formatarTelefone } from '@/utils/validation'
 import {
   buscarClientePorTelefone,
@@ -32,7 +30,6 @@ export function PhonePromptModal({ open, onDone }: Props) {
       const found = await buscarClientePorTelefone(phone)
       saveClienteSession(phone, found?.nome ?? '')
     } catch {
-      // salva só o telefone; o nome será preenchido pelo cliente no carrinho
       saveClienteSession(phone, '')
     } finally {
       setLoading(false)
@@ -51,42 +48,90 @@ export function PhonePromptModal({ open, onDone }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) handlePular() }}>
-      <DialogContent className="max-w-sm" aria-describedby="phone-prompt-desc">
-        <div className="flex flex-col items-center gap-4 pt-2 pb-1 text-center">
-          <div className="bg-primary/10 rounded-full p-3">
-            <Smartphone className="h-7 w-7 text-primary" />
+      <DialogContent className="max-w-sm p-0 overflow-hidden" aria-describedby="phone-prompt-desc">
+        {/* Header temático */}
+        <div style={{
+          background: 'linear-gradient(160deg, #1E293B 0%, #11182A 100%)',
+          padding: '28px 24px 24px',
+          textAlign: 'center',
+          position: 'relative',
+          overflow: 'hidden',
+        }}>
+          {/* Emojis fundo */}
+          <div style={{
+            position: 'absolute', inset: 0, opacity: 0.07,
+            display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', placeItems: 'center',
+            transform: 'rotate(-6deg) scale(1.3)',
+          }}>
+            {Array.from({ length: 12 }, (_, i) => (
+              <span key={i} style={{ fontSize: 22 }}>
+                {['⚽', '🏆', '🍔', '🍟'][i % 4]}
+              </span>
+            ))}
           </div>
+
+          <div style={{
+            position: 'relative', zIndex: 1,
+            width: 64, height: 64, borderRadius: 999,
+            background: 'rgba(255,255,255,0.1)',
+            backdropFilter: 'blur(6px)',
+            border: '1.5px solid rgba(255,255,255,0.15)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            margin: '0 auto 14px',
+            fontSize: 28,
+          }}>
+            🍔
+          </div>
+
+          <DialogTitle style={{
+            position: 'relative', zIndex: 1,
+            color: '#fff', fontSize: 20, fontWeight: 800,
+            letterSpacing: -0.3, margin: 0,
+          }}>
+            Luizão Lanches
+          </DialogTitle>
+          <DialogDescription id="phone-prompt-desc" style={{
+            position: 'relative', zIndex: 1,
+            color: 'rgba(255,255,255,0.6)', fontSize: 13,
+            marginTop: 4, fontWeight: 500,
+          }}>
+            Informe seu telefone pra gente te reconhecer nos próximos pedidos
+          </DialogDescription>
+        </div>
+
+        {/* Body */}
+        <div style={{ padding: '20px 24px 24px', display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div>
-            <DialogTitle className="text-lg font-bold">Bem-vindo ao Luizão Lanches!</DialogTitle>
-            <DialogDescription id="phone-prompt-desc" className="mt-1 text-sm">
-              Informe seu telefone para agilizar seus pedidos futuros — preencheremos tudo automaticamente.
-            </DialogDescription>
+            <Input
+              id="prompt-phone"
+              value={phone}
+              onChange={(e) => { setPhone(formatarTelefone(e.target.value)); setError('') }}
+              onKeyDown={handleKeyDown}
+              placeholder="(11) 99999-9999"
+              inputMode="tel"
+              className={error ? 'border-destructive' : ''}
+              autoFocus
+              style={{ fontSize: 16, height: 46, borderRadius: 12 }}
+            />
+            {error && <p style={{ fontSize: 12, color: '#DC2626', marginTop: 4 }}>{error}</p>}
           </div>
 
-          <div className="w-full space-y-3 text-left">
-            <div>
-              <Label htmlFor="prompt-phone">Número de telefone</Label>
-              <Input
-                id="prompt-phone"
-                value={phone}
-                onChange={(e) => { setPhone(formatarTelefone(e.target.value)); setError('') }}
-                onKeyDown={handleKeyDown}
-                placeholder="(11) 99999-9999"
-                className={error ? 'border-destructive' : ''}
-                autoFocus
-              />
-              {error && <p className="text-xs text-destructive mt-1">{error}</p>}
-            </div>
-
-            <Button className="w-full" onClick={handleContinuar} disabled={loading}>
-              {loading ? 'Verificando…' : 'Continuar'}
-            </Button>
-          </div>
+          <Button
+            className="w-full"
+            onClick={handleContinuar}
+            disabled={loading}
+            style={{ height: 46, borderRadius: 12, fontSize: 15, fontWeight: 700 }}
+          >
+            {loading ? 'Verificando…' : 'Continuar'}
+          </Button>
 
           <button
             type="button"
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors underline-offset-2 hover:underline"
             onClick={handlePular}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              fontSize: 13, color: '#9CA3AF', textAlign: 'center', padding: '2px 0',
+            }}
           >
             Pular por agora
           </button>

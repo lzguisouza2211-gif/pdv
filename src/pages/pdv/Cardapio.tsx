@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
+import React from 'react'
 import { ItemCardapio, ExtraOption } from '@/types'
 import { useCardapio } from '@/hooks/useCardapio'
 import { useStoreStatus } from '@/hooks/useStoreStatus'
@@ -16,6 +17,13 @@ import { formatBRL } from '@/utils/calc'
 
 const CATEGORIA_ORDER = ['Lanches', 'Macarrão', 'Porções', 'Omeletes', 'Bebidas', 'Cervejas', 'Doces']
 const CUSTOM_CATS = new Set(['Lanches', 'Macarrão', 'Omeletes'])
+
+// Esquenta da Copa — seleção curada de itens ideais para assistir ao jogo.
+// Combina bem: x-bacon ou x-tudo com Brahma/Skol lata, mineirão pra torcida grande,
+// batata c/ queijo e bacon ou pernil e cebola pra dividir na mesa.
+// São itens reais do cardápio; exibidos aqui como destaque temático, sem alterar preços.
+const COPA_ITEM_NAMES = ['x-bacon', 'x-tudo', 'mineirão', 'batata c/ queijo e bacon', 'pernil e cebola']
+const COPA_ITEM_NAMES_SET = new Set(COPA_ITEM_NAMES)
 
 const CATEGORIA_META: Record<string, { emoji: string; tint: string }> = {
   Lanches:  { emoji: '🍔', tint: '#FFE8D6' },
@@ -76,6 +84,13 @@ export function Cardapio() {
       .slice(0, 5),
   [itens])
 
+  // Itens Copa na ordem definida, só os disponíveis
+  const copaItems = useMemo(() =>
+    COPA_ITEM_NAMES
+      .map((nome) => itens.find((i) => i.nome === nome && i.ativo))
+      .filter((i): i is ItemCardapio => !!i),
+  [itens])
+
   // Scroll listener — detecta categoria ativa conforme o scroll
   // (mais confiável que IntersectionObserver no mobile)
   const updateActiveCat = useCallback(() => {
@@ -114,7 +129,7 @@ export function Cardapio() {
     setActiveCat(cat)
   }
 
-  function handleAdd(item: ItemCardapio) {
+  function handleAdd(item: ItemCardapio, e: React.MouseEvent) {
     if (CUSTOM_CATS.has(item.categoria)) {
       setCustomItem(item)
     } else {
@@ -128,6 +143,10 @@ export function Cardapio() {
         categoria: item.categoria,
         extras: [],
       })
+      if ((window as any).CopaFX) {
+        ;(window as any).CopaFX.flyBallToBag(e.clientX, e.clientY)
+        ;(window as any).CopaFX.burstAt(e.clientX, e.clientY, { count: 14, power: 0.7 })
+      }
     }
   }
 
@@ -148,6 +167,16 @@ export function Cardapio() {
       observacoes,
       extras,
     })
+    if ((window as any).CopaFX) {
+      const cx = window.innerWidth / 2
+      const cy = window.innerHeight / 2
+      if (COPA_ITEM_NAMES_SET.has(customItem.nome)) {
+        ;(window as any).CopaFX.goal('GOOOL!')
+      } else {
+        ;(window as any).CopaFX.burstAt(cx, cy, { count: 40, power: 1.2 })
+      }
+      ;(window as any).CopaFX.flyBallToBag(cx, cy)
+    }
   }
 
   return (
@@ -158,6 +187,7 @@ export function Cardapio() {
         position: 'relative', height: 210, flexShrink: 0, overflow: 'hidden',
         background: 'linear-gradient(160deg, #1E293B 0%, #11182A 70%)',
       }}>
+        {/* Emojis de fundo Copa */}
         <div style={{
           position: 'absolute', inset: 0, opacity: 0.09,
           display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', placeItems: 'center',
@@ -165,10 +195,26 @@ export function Cardapio() {
         }}>
           {Array.from({ length: 20 }, (_, i) => (
             <span key={i} style={{ fontSize: 34 }}>
-              {['🍔', '🍟', '🥤', '🍰', '🍺'][i % 5]}
+              {['⚽', '🏆', '🥅', '🍔', '🍟'][i % 5]}
             </span>
           ))}
         </div>
+
+        {/* Bandeirinhas verde/amarelo/azul no topo */}
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 4 }}>
+          <svg viewBox="0 0 400 26" preserveAspectRatio="none" width="100%" height="26" xmlns="http://www.w3.org/2000/svg">
+            <line x1="0" y1="5" x2="400" y2="5" stroke="rgba(255,255,255,0.45)" strokeWidth="1"/>
+            {[16,48,80,112,144,176,208,240,272,304,336,368].map((x, i) => (
+              <polygon
+                key={i}
+                points={`${x - 10},2 ${x + 10},2 ${x},20`}
+                fill={['#0E8C4A', '#FFCC29', '#2A3F8F'][i % 3]}
+                opacity="0.92"
+              />
+            ))}
+          </svg>
+        </div>
+
         <div style={{
           position: 'absolute', inset: 0,
           background: 'linear-gradient(180deg, rgba(10,14,22,0.3) 0%, rgba(10,14,22,0) 40%, rgba(10,14,22,0.4) 100%)',
@@ -180,7 +226,6 @@ export function Cardapio() {
             background: 'rgba(15,20,30,0.45)', backdropFilter: 'blur(6px)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            {/* Hambúrguer icon */}
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
               <path d="M12 4C7.6 4 4 6.5 4 9.5h16C20 6.5 16.4 4 12 4z" fill="#fff" opacity="0.9"/>
               <rect x="3" y="11" width="18" height="2.5" rx="1.25" fill="#fff" opacity="0.9"/>
@@ -199,6 +244,17 @@ export function Cardapio() {
           </div>
           <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 13, marginTop: 6, fontWeight: 500 }}>
             lanches, porções e macarrão
+          </div>
+          {/* Selo Esquenta da Copa */}
+          <div style={{
+            display: 'inline-flex', alignItems: 'center', gap: 5,
+            background: 'linear-gradient(135deg, #0E8C4A, #0A6E3A)',
+            color: '#FFCC29', fontSize: 12, fontWeight: 800,
+            padding: '4px 14px', borderRadius: 999,
+            marginTop: 10, letterSpacing: 0.5,
+            boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+          }}>
+            ⚽ Esquenta da Copa
           </div>
         </div>
       </div>
@@ -250,6 +306,16 @@ export function Cardapio() {
         </div>
       </div>
 
+      {/* ── Faixa promo Copa ─────────────────────────────────── */}
+      <div style={{
+        background: 'linear-gradient(90deg, #0E8C4A 0%, #0A6E3A 100%)',
+        color: '#FFCC29', textAlign: 'center',
+        fontSize: 13, fontWeight: 800, padding: '9px 16px',
+        letterSpacing: 0.3,
+      }}>
+        🏆 Pede antes do apito — entrega rápida pra você curtir o jogo!
+      </div>
+
       {/* ── Destaques carousel ───────────────────────────────── */}
       {!loading && highlights.length > 0 && (
         <div style={{ marginTop: 16 }}>
@@ -269,7 +335,7 @@ export function Cardapio() {
               return (
                 <button
                   key={item.id}
-                  onClick={() => !isDisabled && handleAdd(item)}
+                  onClick={(e) => !isDisabled && handleAdd(item, e)}
                   style={{
                     width: 120, flexShrink: 0, border: 'none',
                     background: 'none', padding: 0,
@@ -313,6 +379,61 @@ export function Cardapio() {
           </div>
         </div>
       )}
+
+      {/* ── Esquenta da Copa ─────────────────────────────────── */}
+      <div style={{ marginTop: 16, position: 'relative', overflow: 'hidden' }}>
+        {/* Emojis de fundo */}
+        <div style={{
+          position: 'absolute', inset: 0, opacity: 0.06, zIndex: 0,
+          display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', placeItems: 'center',
+          transform: 'rotate(-4deg) scale(1.2)',
+        }}>
+          {Array.from({ length: 18 }, (_, i) => (
+            <span key={i} style={{ fontSize: 28 }}>
+              {['⚽', '🏆', '🥅', '🎽', '📺', '🍔'][i % 6]}
+            </span>
+          ))}
+        </div>
+
+        <div style={{
+          position: 'relative', zIndex: 1,
+          background: 'linear-gradient(135deg, #0E8C4A 0%, #0A5C32 100%)',
+          padding: '20px 24px',
+          display: 'flex', flexDirection: 'column', gap: 4,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: 28 }}>⚽</span>
+            <div>
+              <div style={{
+                fontSize: 20, fontWeight: 900, color: '#FFCC29',
+                letterSpacing: -0.3, lineHeight: 1.1,
+              }}>
+                Esquenta da Copa
+              </div>
+              <div style={{
+                fontSize: 12.5, color: 'rgba(255,255,255,0.75)',
+                fontWeight: 600, marginTop: 2,
+              }}>
+                Seu lanche pra chegar antes do apito!
+              </div>
+            </div>
+          </div>
+
+          {/* Pills decorativos */}
+          <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
+            {['🍔 Lanches', '🍟 Porções', '🍺 Cervejas'].map((label) => (
+              <span key={label} style={{
+                background: 'rgba(255,255,255,0.12)',
+                border: '1px solid rgba(255,255,255,0.2)',
+                color: '#fff', fontSize: 11.5, fontWeight: 700,
+                padding: '3px 10px', borderRadius: 999, backdropFilter: 'blur(4px)',
+              }}>
+                {label}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
 
       {/* ── Category dropdown (sticky) ───────────────────────── */}
       {!loading && !error && categorias.length > 0 && (
@@ -416,6 +537,7 @@ export function Cardapio() {
           zIndex: 30, padding: '0 16px 20px', pointerEvents: 'none',
         }}>
           <button
+            id="copa-bagbar"
             onClick={() => setDrawerOpen(true)}
             style={{
               width: '100%', maxWidth: 640,

@@ -1,3 +1,4 @@
+import React from 'react'
 import { ItemCardapio } from '@/types'
 import { formatBRL } from '@/utils/calc'
 import { Minus, Plus } from 'lucide-react'
@@ -16,7 +17,7 @@ const CATEGORY_STYLE: Record<string, { emoji: string; tint: string }> = {
 
 interface Props {
   item: ItemCardapio
-  onAdd: (item: ItemCardapio) => void
+  onAdd: (item: ItemCardapio, e: React.MouseEvent) => void
   onRemove?: () => void
   storeOpen: boolean
   qty?: number
@@ -69,7 +70,7 @@ export function ProductCard({ item, onAdd, onRemove, storeOpen, qty = 0 }: Props
       >
         {/* Thumb — área de toque para abrir/adicionar */}
         <div
-          onClick={() => !disabled && onAdd(item)}
+          onClick={(e) => !disabled && onAdd(item, e)}
           style={{
             width: 96, height: 96, borderRadius: 16, background: style.tint,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -120,7 +121,7 @@ export function ProductCard({ item, onAdd, onRemove, storeOpen, qty = 0 }: Props
                 {qty}
               </span>
               <button
-                onClick={() => !disabled && onAdd(item)}
+                onClick={(e) => !disabled && onAdd(item, e)}
                 disabled={disabled}
                 style={{
                   width: 32, height: 32, borderRadius: 999, border: 'none',
@@ -134,7 +135,7 @@ export function ProductCard({ item, onAdd, onRemove, storeOpen, qty = 0 }: Props
             </div>
           ) : (
             <button
-              onClick={() => !disabled && onAdd(item)}
+              onClick={(e) => !disabled && onAdd(item, e)}
               disabled={disabled}
               style={{
                 width: 32, height: 32, borderRadius: 999,

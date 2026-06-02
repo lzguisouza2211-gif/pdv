@@ -1,10 +1,11 @@
+import React from 'react'
 import { ItemCardapio } from '@/types'
 import { ProductCard } from './ProductCard'
 
 interface Props {
   categoria?: string
   itens: ItemCardapio[]
-  onAdd: (item: ItemCardapio) => void
+  onAdd: (item: ItemCardapio, e: React.MouseEvent) => void
   onRemove?: (item: ItemCardapio) => void
   storeOpen: boolean
   cartQtys?: Record<string, number>

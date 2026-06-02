@@ -191,6 +191,10 @@ export function CartDrawer({ open, onClose, onSuccess, deliveryFee }: Props) {
         clienteEncontrado: clienteSnapshot,
         ...enderecoSnapshot,
       })
+      if ((window as any).CopaFX) {
+        ;(window as any).CopaFX.fireworks()
+        setTimeout(() => { if ((window as any).CopaFX) (window as any).CopaFX.goal('É CAMPEÃO!') }, 700)
+      }
     } catch (err: unknown) {
       const e = err as Record<string, unknown>
       setErrors({ submit: `Erro: ${e?.message ?? 'Tente novamente.'}` })
