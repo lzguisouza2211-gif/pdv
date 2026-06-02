@@ -38,6 +38,7 @@ export function EditarPedidoModal({ pedido, onClose, onSaved }: Props) {
   const [cliente, setCliente] = useState('')
   const [formaPagamento, setFormaPagamento] = useState<FormaPagamento>('dinheiro')
   const [status, setStatus] = useState<PedidoStatus>('Recebido')
+  const [taxaEntrega, setTaxaEntrega] = useState('')
   const [salvando, setSalvando] = useState(false)
   const [cancelando, setCancelando] = useState(false)
   const [confirmCancel, setConfirmCancel] = useState(false)
@@ -52,13 +53,16 @@ export function EditarPedidoModal({ pedido, onClose, onSaved }: Props) {
     setCliente(pedido.cliente)
     setFormaPagamento(pedido.formapagamento)
     setStatus(pedido.status === 'Cancelado' ? 'Recebido' : pedido.status)
+    setTaxaEntrega(String(pedido.taxa_entrega ?? 0))
     setConfirmCancel(false)
     setAdicionando(false)
     setBuscaAdd('')
     setExpandedCats(new Set())
   }, [pedido])
 
-  const total = editItems.reduce((s, i) => s + i.preco * i.quantidade, 0)
+  const subtotal = editItems.reduce((s, i) => s + i.preco * i.quantidade, 0)
+  const taxaNum = parseFloat(taxaEntrega) || 0
+  const total = subtotal + (pedido?.tipoentrega === 'entrega' ? taxaNum : 0)
 
   function changeQty(index: number, delta: number) {
     setEditItems(prev =>
@@ -139,6 +143,7 @@ export function EditarPedidoModal({ pedido, onClose, onSaved }: Props) {
         formapagamento: formaPagamento,
         status,
         itens: editItems,
+        taxa_entrega: pedido.tipoentrega === 'entrega' ? taxaNum : 0,
         total,
       })
       toast({ title: 'Pedido atualizado' })
@@ -331,6 +336,23 @@ export function EditarPedidoModal({ pedido, onClose, onSaved }: Props) {
             )}
           </div>
 
+          {/* Taxa de entrega (somente para pedidos de entrega) */}
+          {pedido?.tipoentrega === 'entrega' && (
+            <div>
+              <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1.5 block">
+                Taxa de entrega (R$)
+              </Label>
+              <Input
+                type="number"
+                min="0"
+                step="0.50"
+                value={taxaEntrega}
+                onChange={e => setTaxaEntrega(e.target.value)}
+                className="w-36 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              />
+            </div>
+          )}
+
           {/* Pagamento */}
           <div>
             <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1.5 block">
@@ -376,9 +398,23 @@ export function EditarPedidoModal({ pedido, onClose, onSaved }: Props) {
           </div>
 
           {/* Total */}
-          <div className="flex justify-between items-center border-t pt-3 font-bold">
-            <span>Total</span>
-            <span className="text-primary text-lg">{formatBRL(total)}</span>
+          <div className="border-t pt-3 space-y-1">
+            {pedido?.tipoentrega === 'entrega' && (
+              <>
+                <div className="flex justify-between items-center text-sm text-muted-foreground">
+                  <span>Subtotal</span>
+                  <span>{formatBRL(subtotal)}</span>
+                </div>
+                <div className="flex justify-between items-center text-sm text-muted-foreground">
+                  <span>Taxa de entrega</span>
+                  <span>{formatBRL(taxaNum)}</span>
+                </div>
+              </>
+            )}
+            <div className="flex justify-between items-center font-bold">
+              <span>Total</span>
+              <span className="text-primary text-lg">{formatBRL(total)}</span>
+            </div>
           </div>
 
         </div>

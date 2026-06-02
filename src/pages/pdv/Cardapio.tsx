@@ -245,12 +245,6 @@ export function Cardapio() {
                 <Clock size={13} />
                 ~{tempoEspera} min
               </span>
-              {fee > 0 && (
-                <>
-                  <span style={{ color: '#ECECEF' }}>·</span>
-                  <span style={{ color: '#6B7280', fontSize: 13.5 }}>Entrega {formatBRL(fee)}</span>
-                </>
-              )}
             </div>
           )}
         </div>
