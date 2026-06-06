@@ -62,6 +62,16 @@ async function fetchVersionSafe(): Promise<[number, number, number]> {
 
 import type { ConnectionState } from './types.js'
 
+function brazilAlternateJid(jid: string): string | null {
+  const digits = jid.replace('@s.whatsapp.net', '')
+  if (!digits.startsWith('55') || digits.length < 12) return null
+  const ddd = digits.slice(2, 4)
+  const local = digits.slice(4)
+  if (local.length === 9 && local.startsWith('9')) return `55${ddd}${local.slice(1)}@s.whatsapp.net`
+  if (local.length === 8) return `55${ddd}9${local}@s.whatsapp.net`
+  return null
+}
+
 export class BaileysClient extends EventEmitter {
   private socket: WASocket | null = null
   private state: ConnectionState = 'disconnected'
@@ -223,16 +233,21 @@ export class BaileysClient extends EventEmitter {
       throw new Error(`WhatsApp não conectado (estado: ${this.state})`)
     }
 
-    // Resolve o JID canônico antes de enviar — necessário porque números brasileiros
-    // podem estar cadastrados no WA em formato 12 ou 13 dígitos (553599876408 vs
-    // 5535999876408). Mandar para o formato errado faz o servidor aceitar mas
-    // a mensagem nunca chega.
-    const results = await this.socket.onWhatsApp(jid)
-    const info = results?.[0]
-    if (!info?.exists) {
+    // Tenta o JID original e o formato alternativo brasileiro (com/sem 9 extra).
+    // Números BR podem estar no WA como 12 ou 13 dígitos dependendo de quando
+    // o número foi cadastrado (antes/depois da mudança do plano de numeração).
+    const candidates = [jid, brazilAlternateJid(jid)].filter(Boolean) as string[]
+    let resolvedJid: string | null = null
+    for (const candidate of candidates) {
+      const results = await this.socket.onWhatsApp(candidate)
+      if (results?.[0]?.exists) {
+        resolvedJid = results[0].jid
+        break
+      }
+    }
+    if (!resolvedJid) {
       throw new Error(`Número não encontrado no WhatsApp: ${jid}`)
     }
-    const resolvedJid = info.jid
 
     const result = await this.socket.sendMessage(resolvedJid, { text })
     logger.info('[WPP]', `sendMessage result: ${JSON.stringify(result?.key ?? 'undefined')}`)
