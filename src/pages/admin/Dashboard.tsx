@@ -6,39 +6,77 @@ import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { updateStoreOpen, updateTempoEspera, fetchPixConfig, updatePixConfig } from '@/services/api/storeStatus.service'
 import { formatBRL } from '@/utils/calc'
 import { toast } from '@/hooks/use-toast'
 import { ShoppingBag, DollarSign, TrendingUp, Clock, QrCode } from 'lucide-react'
 
-function formatPixKey(raw: string): string {
-  const trimmed = raw.trim()
-  if (!trimmed) return ''
+type PixKeyType = 'cpf' | 'cnpj' | 'celular' | 'email' | 'aleatoria'
 
-  // Email: mantém como está
-  if (trimmed.includes('@')) return trimmed.toLowerCase()
+function applyPixMask(value: string, type: PixKeyType): string {
+  if (type === 'email' || type === 'aleatoria') return value
 
-  const digits = trimmed.replace(/\D/g, '')
+  const d = value.replace(/\D/g, '')
 
-  // Telefone: começa com + ou tem 10-11 dígitos numéricos sem ser CPF/CNPJ
-  if (trimmed.startsWith('+') || trimmed.startsWith('55')) {
-    const phone = digits.startsWith('55') ? digits : '55' + digits
-    if (phone.length === 12)
-      return `+${phone.slice(0, 2)} (${phone.slice(2, 4)}) ${phone.slice(4, 8)}-${phone.slice(8)}`
-    if (phone.length === 13)
-      return `+${phone.slice(0, 2)} (${phone.slice(2, 4)}) ${phone.slice(4, 9)}-${phone.slice(9)}`
+  if (type === 'cpf') {
+    const s = d.slice(0, 11)
+    if (s.length <= 3) return s
+    if (s.length <= 6) return `${s.slice(0, 3)}.${s.slice(3)}`
+    if (s.length <= 9) return `${s.slice(0, 3)}.${s.slice(3, 6)}.${s.slice(6)}`
+    return `${s.slice(0, 3)}.${s.slice(3, 6)}.${s.slice(6, 9)}-${s.slice(9)}`
   }
 
-  // CPF: 11 dígitos
-  if (digits.length === 11)
-    return digits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')
+  if (type === 'cnpj') {
+    const s = d.slice(0, 14)
+    if (s.length <= 2) return s
+    if (s.length <= 5) return `${s.slice(0, 2)}.${s.slice(2)}`
+    if (s.length <= 8) return `${s.slice(0, 2)}.${s.slice(2, 5)}.${s.slice(5)}`
+    if (s.length <= 12) return `${s.slice(0, 2)}.${s.slice(2, 5)}.${s.slice(5, 8)}/${s.slice(8)}`
+    return `${s.slice(0, 2)}.${s.slice(2, 5)}.${s.slice(5, 8)}/${s.slice(8, 12)}-${s.slice(12)}`
+  }
 
-  // CNPJ: 14 dígitos
-  if (digits.length === 14)
-    return digits.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5')
+  if (type === 'celular') {
+    const s = d.slice(0, 11)
+    if (s.length === 0) return ''
+    if (s.length <= 2) return `(${s}`
+    if (s.length <= 6) return `(${s.slice(0, 2)}) ${s.slice(2)}`
+    if (s.length <= 10) return `(${s.slice(0, 2)}) ${s.slice(2, 6)}-${s.slice(6)}`
+    return `(${s.slice(0, 2)}) ${s.slice(2, 7)}-${s.slice(7)}`
+  }
 
-  // Chave aleatória (EVP) ou qualquer outro formato: mantém como está
-  return trimmed
+  return value
+}
+
+function getRawPixKey(masked: string, type: PixKeyType): string {
+  if (type === 'email' || type === 'aleatoria') return masked.trim()
+  return masked.replace(/\D/g, '')
+}
+
+function detectPixType(raw: string): PixKeyType {
+  if (!raw) return 'cpf'
+  if (raw.includes('@')) return 'email'
+  const d = raw.replace(/\D/g, '')
+  if (d.length === 14) return 'cnpj'
+  if (d.length === 10) return 'celular'
+  if (d.length === 11) return 'cpf'
+  return 'aleatoria'
+}
+
+const PIX_TYPE_LABELS: Record<PixKeyType, string> = {
+  cpf: 'CPF',
+  cnpj: 'CNPJ',
+  celular: 'Celular',
+  email: 'E-mail',
+  aleatoria: 'Chave aleatória',
+}
+
+const PIX_TYPE_PLACEHOLDERS: Record<PixKeyType, string> = {
+  cpf: '000.000.000-00',
+  cnpj: '00.000.000/0000-00',
+  celular: '(00) 00000-0000',
+  email: 'exemplo@email.com',
+  aleatoria: 'Cole a chave aleatória',
 }
 
 export function Dashboard() {
@@ -48,11 +86,10 @@ export function Dashboard() {
   const [tempoEdit, setTempoEdit] = useState('')
   const [savingTempo, setSavingTempo] = useState(false)
 
+  const [pixKeyType, setPixKeyType] = useState<PixKeyType>('cpf')
   const [pixKey, setPixKey] = useState('')
   const [pixRecipient, setPixRecipient] = useState('')
   const [savingPix, setSavingPix] = useState(false)
-
-  const pixFormatted = formatPixKey(pixKey)
 
   const pedidosDoDia = pedidos.filter((p) => p.status !== 'Cancelado')
   const faturamento = pedidosDoDia.reduce((s, p) => s + p.total, 0)
@@ -61,7 +98,9 @@ export function Dashboard() {
   useEffect(() => {
     fetchPixConfig().then((config) => {
       if (config) {
-        setPixKey(config.key)
+        const type = detectPixType(config.key)
+        setPixKeyType(type)
+        setPixKey(applyPixMask(config.key, type))
         setPixRecipient(config.recipientName)
       }
     })
@@ -97,10 +136,11 @@ export function Dashboard() {
   async function handleSavePix() {
     if (!pixKey.trim()) return
     setSavingPix(true)
+    const rawKey = getRawPixKey(pixKey, pixKeyType)
     try {
       await updatePixConfig({
-        key: pixKey.trim(),
-        displayKey: pixFormatted || pixKey.trim(),
+        key: rawKey,
+        displayKey: pixKey.trim(),
         recipientName: pixRecipient.trim(),
       })
       toast({ title: 'Chave PIX salva!' })
@@ -203,16 +243,30 @@ export function Dashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
+            <Select
+              value={pixKeyType}
+              onValueChange={(v) => {
+                setPixKeyType(v as PixKeyType)
+                setPixKey('')
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Tipo de chave" />
+              </SelectTrigger>
+              <SelectContent>
+                {(Object.keys(PIX_TYPE_LABELS) as PixKeyType[]).map((t) => (
+                  <SelectItem key={t} value={t}>
+                    {PIX_TYPE_LABELS[t]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Input
-              placeholder="Chave (CNPJ, CPF, e-mail…)"
+              placeholder={PIX_TYPE_PLACEHOLDERS[pixKeyType]}
               value={pixKey}
-              onChange={(e) => setPixKey(e.target.value)}
+              onChange={(e) => setPixKey(applyPixMask(e.target.value, pixKeyType))}
+              inputMode={pixKeyType === 'email' || pixKeyType === 'aleatoria' ? 'text' : 'numeric'}
             />
-            {pixFormatted && pixFormatted !== pixKey.trim() && (
-              <p className="text-xs text-muted-foreground px-1">
-                Exibição: <span className="font-medium text-foreground">{pixFormatted}</span>
-              </p>
-            )}
             <Input
               placeholder="Nome do recebedor"
               value={pixRecipient}
