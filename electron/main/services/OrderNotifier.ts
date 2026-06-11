@@ -40,6 +40,7 @@ export class OrderNotifier {
 
   start(): void {
     this.subscribe()
+    setInterval(() => this.subscribe(), 30 * 60 * 1000)
   }
 
   private subscribe(): void {
