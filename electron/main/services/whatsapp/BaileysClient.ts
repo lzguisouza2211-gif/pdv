@@ -143,12 +143,14 @@ export class BaileysClient extends EventEmitter {
       if (this.state !== 'connected' || !this.socket || this.retryTimer) return
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const ws = (this.socket as any).ws
-      if (ws && ws.readyState !== 1 /* WebSocket.OPEN */) {
+      // ws.isOpen é a propriedade que o próprio Baileys usa internamente antes de enviar.
+      // Fallback para readyState caso a API interna mude.
+      const isOpen = ws
+        ? (typeof ws.isOpen === 'boolean' ? ws.isOpen : ws.readyState === 1)
+        : false
+      if (!isOpen) {
         logger.warn('[WPP]', 'Watchdog: socket morto detectado — forçando reconexão')
-        this.state = 'disconnected'
-        this.connectedAt = null
-        this.retryCount = 0
-        void this.connect()
+        this.handleSilentDisconnect()
       }
     }, WATCHDOG_INTERVAL_MS)
   }
@@ -226,12 +228,58 @@ export class BaileysClient extends EventEmitter {
     }
   }
 
+  // ─── Reconexão por desconexão silenciosa ─────────────────────────────────
+
+  private handleSilentDisconnect(): void {
+    if (this.state !== 'connected') return
+    logger.warn('[WPP]', 'Desconexão silenciosa detectada durante envio — forçando reconexão')
+    this.state = 'disconnected'
+    this.connectedAt = null
+    this.retryCount = 0
+    this.stopWatchdog()
+    this.emit('disconnected', { statusCode: -1, reason: 'silent_disconnect' })
+    void this.connect()
+  }
+
+  private waitForConnected(timeoutMs: number): Promise<void> {
+    if (this.state === 'connected') return Promise.resolve()
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        this.off('connected', onConnected)
+        reject(new Error(`Timeout aguardando reconexão (${timeoutMs / 1000}s)`))
+      }, timeoutMs)
+      const onConnected = () => {
+        clearTimeout(timer)
+        resolve()
+      }
+      this.once('connected', onConnected)
+    })
+  }
+
   // ─── Envio ────────────────────────────────────────────────────────────────
 
   async sendText(jid: string, text: string): Promise<void> {
     if (!this.socket || this.state !== 'connected') {
       throw new Error(`WhatsApp não conectado (estado: ${this.state})`)
     }
+
+    try {
+      await this._doSendText(jid, text)
+    } catch (err) {
+      if (err instanceof Error && err.message.includes('Connection Closed')) {
+        // Primeiro falhou: dispara reconexão e aguarda até 30s, depois tenta uma vez mais
+        this.handleSilentDisconnect()
+        logger.warn('[WPP]', `Aguardando reconexão para reenviar mensagem para ${jid}…`)
+        await this.waitForConnected(30_000)
+        await this._doSendText(jid, text)
+      } else {
+        throw err
+      }
+    }
+  }
+
+  private async _doSendText(jid: string, text: string): Promise<void> {
+    if (!this.socket) throw new Error('Socket não disponível')
 
     // Tenta o JID original e o formato alternativo brasileiro (com/sem 9 extra).
     // Números BR podem estar no WA como 12 ou 13 dígitos dependendo de quando
