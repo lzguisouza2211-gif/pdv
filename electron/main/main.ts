@@ -11,6 +11,7 @@ import { registerPrinterIpcHandlers } from './ipc/printer.handlers.js'
 
 import { getClient } from './services/whatsapp/BaileysClient.js'
 import { getService } from './services/whatsapp/WhatsAppService.js'
+import { OrderNotifier } from './services/OrderNotifier.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -126,6 +127,9 @@ app.whenReady().then(async () => {
   wppClient.connect().catch((err) =>
     console.error('[ELECTRON] Erro ao conectar WhatsApp:', err)
   )
+
+  // Inicia o listener Realtime para enviar mensagem de confirmação em novos pedidos
+  new OrderNotifier().start()
 
   // ── Etapa 3: Printer — IPC direto, sem processo filho ──────────────────────
   registerPrinterIpcHandlers()
