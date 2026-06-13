@@ -576,11 +576,10 @@ export function Cardapio() {
       <SuccessModal
         open={showSuccess}
         clienteName={successData?.nome ?? ''}
-        clienteEncontrado={successData?.clienteEncontrado ?? null}
-        nomeCliente={successData?.nome ?? ''}
-        phoneCliente={successData?.phone ?? ''}
-        totalPedido={successData?.total ?? 0}
+        phone={successData?.phone ?? ''}
         pedidoId={successData?.pedidoId ?? ''}
+        tempoEspera={tempoEspera}
+        tipoentrega={successData?.tipoentrega ?? 'retirada'}
         onClose={() => { setShowSuccess(false); setSuccessData(null) }}
       />
     </div>

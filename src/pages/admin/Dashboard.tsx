@@ -8,9 +8,10 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { updateStoreOpen, updateTempoEspera, fetchPixConfig, updatePixConfig } from '@/services/api/storeStatus.service'
+import { fetchDeliveryFee, updateDeliveryFee } from '@/services/api/deliveryFee.service'
 import { formatBRL } from '@/utils/calc'
 import { toast } from '@/hooks/use-toast'
-import { ShoppingBag, DollarSign, TrendingUp, Clock, QrCode } from 'lucide-react'
+import { ShoppingBag, DollarSign, TrendingUp, Clock, QrCode, Truck } from 'lucide-react'
 
 type PixKeyType = 'cpf' | 'cnpj' | 'celular' | 'email' | 'aleatoria'
 
@@ -59,7 +60,7 @@ function detectPixType(raw: string): PixKeyType {
   const d = raw.replace(/\D/g, '')
   if (d.length === 14) return 'cnpj'
   if (d.length === 10) return 'celular'
-  if (d.length === 11) return 'cpf'
+  if (d.length === 11) return d[2] === '9' ? 'celular' : 'cpf'
   return 'aleatoria'
 }
 
@@ -91,6 +92,10 @@ export function Dashboard() {
   const [pixRecipient, setPixRecipient] = useState('')
   const [savingPix, setSavingPix] = useState(false)
 
+  const [taxaEntrega, setTaxaEntrega] = useState<number>(0)
+  const [taxaEdit, setTaxaEdit] = useState('')
+  const [savingTaxa, setSavingTaxa] = useState(false)
+
   const pedidosDoDia = pedidos.filter((p) => p.status !== 'Cancelado')
   const faturamento = pedidosDoDia.reduce((s, p) => s + p.total, 0)
   const ticketMedio = pedidosDoDia.length > 0 ? faturamento / pedidosDoDia.length : 0
@@ -104,6 +109,7 @@ export function Dashboard() {
         setPixRecipient(config.recipientName)
       }
     })
+    fetchDeliveryFee().then(setTaxaEntrega).catch(() => {})
   }, [])
 
   async function handleToggleStore(checked: boolean) {
@@ -130,6 +136,23 @@ export function Dashboard() {
       toast({ title: 'Erro ao salvar', description: e?.message, variant: 'destructive' })
     } finally {
       setSavingTempo(false)
+    }
+  }
+
+  async function handleSaveTaxa() {
+    const val = parseFloat(taxaEdit.replace(',', '.'))
+    if (isNaN(val) || val < 0) return
+    setSavingTaxa(true)
+    try {
+      await updateDeliveryFee(val)
+      setTaxaEntrega(val)
+      setTaxaEdit('')
+      toast({ title: 'Taxa de entrega atualizada!' })
+    } catch (err: unknown) {
+      const e = err as { message?: string }
+      toast({ title: 'Erro ao salvar taxa', description: e?.message, variant: 'destructive' })
+    } finally {
+      setSavingTaxa(false)
     }
   }
 
@@ -205,7 +228,7 @@ export function Dashboard() {
       </div>
 
       {/* Controles */}
-      <div className="grid md:grid-cols-3 gap-4">
+      <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-4">
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Status da Loja</CardTitle>
@@ -233,6 +256,30 @@ export function Dashboard() {
             <Button onClick={handleSaveTempo} disabled={savingTempo || !tempoEdit}>
               Salvar
             </Button>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Truck className="h-4 w-4" /> Taxa de entrega
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <p className="text-xs text-muted-foreground">
+              Atual: <span className="font-semibold text-foreground">{formatBRL(taxaEntrega)}</span>
+            </p>
+            <div className="flex gap-2">
+              <Input
+                placeholder="Ex: 7.50"
+                value={taxaEdit}
+                onChange={(e) => setTaxaEdit(e.target.value)}
+                className="flex-1 min-w-0"
+              />
+              <Button onClick={handleSaveTaxa} disabled={savingTaxa || !taxaEdit}>
+                Salvar
+              </Button>
+            </div>
           </CardContent>
         </Card>
 

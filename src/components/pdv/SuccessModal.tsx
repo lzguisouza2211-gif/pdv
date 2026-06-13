@@ -1,151 +1,89 @@
-import { useEffect, useRef, useState } from 'react'
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog'
-import { CheckCircle, UserCheck, UserPlus } from 'lucide-react'
+import { CheckCircle, Clock, MessageCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
-import { Cliente } from '@/types'
-import {
-  criarCliente,
-  registrarPedidoNoCliente,
-  vincularClienteAoPedido,
-  saveClienteSession,
-} from '@/services/api/clientes.service'
+import { TipoEntrega } from '@/types'
+
+const ENTREGA_LABEL: Record<TipoEntrega, string> = {
+  entrega:  'Entrega a domicílio',
+  retirada: 'Retirada no balcão',
+  local:    'Pedido na mesa',
+}
+
+function maskPhone(phone: string): string {
+  if (phone.length < 4) return phone
+  return phone.slice(0, -4) + '****'
+}
 
 interface SuccessModalProps {
   open: boolean
   clienteName: string
-  clienteEncontrado: Cliente | null
-  nomeCliente: string
-  phoneCliente: string
-  totalPedido: number
-  pedidoId: number | string
+  pedidoId: string
+  phone: string
+  tempoEspera: number
+  tipoentrega: TipoEntrega
   onClose: () => void
 }
-
-type SaveState = 'idle' | 'loading' | 'saved' | 'dismissed'
 
 export function SuccessModal({
   open,
   clienteName,
-  clienteEncontrado,
-  nomeCliente,
-  phoneCliente,
-  totalPedido,
   pedidoId,
+  phone,
+  tempoEspera,
+  tipoentrega,
   onClose,
 }: SuccessModalProps) {
-  const [saveState, setSaveState] = useState<SaveState>('idle')
-  const mountedRef = useRef(true)
-
-  useEffect(() => {
-    mountedRef.current = true
-    setSaveState('idle')
-    return () => { mountedRef.current = false }
-  }, [open])
-
-  // Cliente já cadastrado: dispara as operações automaticamente ao montar
-  useEffect(() => {
-    if (!open || !clienteEncontrado || !pedidoId) return
-
-    void (async () => {
-      try {
-        await Promise.all([
-          registrarPedidoNoCliente(clienteEncontrado.id, totalPedido),
-          vincularClienteAoPedido(pedidoId, clienteEncontrado.id),
-        ])
-      } catch (err) {
-      }
-    })()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, clienteEncontrado?.id])
-
-  async function handleSalvar() {
-    if (!nomeCliente || !phoneCliente || saveState !== 'idle') return
-    setSaveState('loading')
-    try {
-      const novoCliente = await criarCliente(nomeCliente, phoneCliente)
-      if (!mountedRef.current) return
-      await Promise.all([
-        registrarPedidoNoCliente(novoCliente.id, totalPedido),
-        vincularClienteAoPedido(pedidoId, novoCliente.id),
-      ])
-      if (!mountedRef.current) return
-      saveClienteSession(phoneCliente, nomeCliente)
-      setSaveState('saved')
-    } catch (err) {
-      if (mountedRef.current) setSaveState('idle')
-    }
-  }
-
-  const totalPedidosCliente = clienteEncontrado
-    ? clienteEncontrado.total_pedidos + 1
-    : 0
-
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-sm text-center">
-        <div className="flex flex-col items-center gap-4 py-4">
-          <CheckCircle className="h-16 w-16 text-green-500" />
+      <DialogContent className="max-w-sm p-0 overflow-hidden">
+        {/* Header verde */}
+        <div className="bg-green-500 px-6 pt-8 pb-6 flex flex-col items-center gap-2 text-center text-white">
+          <div className="rounded-full bg-white/20 p-3">
+            <CheckCircle className="h-10 w-10 text-white" />
+          </div>
           <div>
-            <DialogTitle className="text-xl font-bold">Pedido enviado!</DialogTitle>
-            <DialogDescription className="mt-1">
+            <DialogTitle className="text-white text-xl font-bold">
+              Pedido #{pedidoId} enviado!
+            </DialogTitle>
+            <DialogDescription className="text-green-100 mt-0.5">
               {clienteName
-                ? <>Obrigado, <span className="font-medium text-foreground">{clienteName}</span>! Seu pedido foi recebido.</>
+                ? <>Obrigado, <span className="font-semibold text-white">{clienteName}</span>! 🙌</>
                 : 'Seu pedido foi recebido com sucesso.'}
             </DialogDescription>
           </div>
+        </div>
 
-          {/* Seção de cliente — só exibe se houver telefone */}
-          {clienteEncontrado ? (
-            <Card className="w-full border-green-200 bg-green-50">
-              <CardContent className="pt-4 pb-3 flex items-start gap-3 text-left">
-                <UserCheck className="h-5 w-5 text-green-600 mt-0.5 shrink-0" />
-                <p className="text-sm text-green-800">
-                  Bem-vindo de volta, <span className="font-semibold">{clienteEncontrado.nome}</span>!{' '}
-                  Este é o seu{' '}
-                  <span className="font-semibold">{totalPedidosCliente}º</span> pedido conosco. Obrigado!
+        <div className="p-4 space-y-3">
+          {/* Tempo estimado */}
+          <div className="flex items-center gap-3 rounded-xl border bg-muted/30 p-3">
+            <div className="rounded-full bg-orange-100 p-2 shrink-0">
+              <Clock className="h-4 w-4 text-orange-500" />
+            </div>
+            <div>
+              <p className="text-[11px] text-muted-foreground leading-none mb-0.5">
+                {ENTREGA_LABEL[tipoentrega]}
+              </p>
+              <p className="text-sm font-semibold">
+                Pronto em aproximadamente{' '}
+                <span className="text-primary">{tempoEspera} min</span>
+              </p>
+            </div>
+          </div>
+
+          {/* WhatsApp */}
+          {phone && (
+            <div className="flex items-center gap-3 rounded-xl border bg-muted/30 p-3">
+              <div className="rounded-full bg-green-100 p-2 shrink-0">
+                <MessageCircle className="h-4 w-4 text-green-600" />
+              </div>
+              <div>
+                <p className="text-[11px] text-muted-foreground leading-none mb-0.5">
+                  Confirmação via WhatsApp
                 </p>
-              </CardContent>
-            </Card>
-          ) : phoneCliente ? (
-            <Card className="w-full border-muted">
-              <CardContent className="pt-4 pb-3 flex flex-col gap-3 text-left">
-                <div className="flex items-start gap-3">
-                  <UserPlus className="h-5 w-5 text-muted-foreground mt-0.5 shrink-0" />
-                  {saveState === 'saved' ? (
-                    <p className="text-sm text-green-700">
-                      Dados salvos! Da próxima vez preenchemos tudo para você.
-                    </p>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">
-                      Quer agilizar seu próximo pedido? Salve seus dados e não precisará digitar de novo.
-                    </p>
-                  )}
-                </div>
-                {saveState !== 'saved' && saveState !== 'dismissed' && (
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      className="flex-1"
-                      onClick={handleSalvar}
-                      disabled={saveState === 'loading'}
-                    >
-                      {saveState === 'loading' ? 'Salvando…' : 'Salvar meus dados'}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="flex-1"
-                      onClick={() => setSaveState('dismissed')}
-                      disabled={saveState === 'loading'}
-                    >
-                      Agora não
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          ) : null}
+                <p className="text-sm font-semibold">{maskPhone(phone)}</p>
+              </div>
+            </div>
+          )}
 
           <Button onClick={onClose} className="w-full">
             Fazer novo pedido

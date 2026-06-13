@@ -1,16 +1,55 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Pedido, PedidoStatus, FormaPagamento } from '@/types'
 import { avancarStatus } from '@/services/api/pedidos.service'
 import { notificarStatusPedido } from '@/services/whatsapp.service'
+import { useStoreStatus } from '@/hooks/useStoreStatus'
 import { useToast } from '@/hooks/use-toast'
 import { formatBRL } from '@/utils/calc'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { PrintButton } from './PrintButton'
 import { EditarPedidoModal } from './EditarPedidoModal'
-import { format } from 'date-fns'
+import { format, differenceInMinutes } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { Pencil, ChevronDown, ChevronUp } from 'lucide-react'
+import { Pencil, ChevronDown, ChevronUp, Phone, Clock, AlertTriangle } from 'lucide-react'
+
+function useNow(ms = 30_000) {
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), ms)
+    return () => clearInterval(id)
+  }, [ms])
+  return now
+}
+
+function OrderTimer({ createdAt, tempoEsperaMin }: { createdAt: string; tempoEsperaMin: number }) {
+  const now = useNow()
+  const elapsed = differenceInMinutes(now, new Date(createdAt))
+  const ratio = Math.min(elapsed / tempoEsperaMin, 1)
+  const atrasado = elapsed > tempoEsperaMin
+
+  const barColor = atrasado ? 'bg-red-500' : ratio >= 0.6 ? 'bg-amber-400' : 'bg-green-500'
+  const textColor = atrasado ? 'text-red-600' : ratio >= 0.6 ? 'text-amber-600' : 'text-green-700'
+
+  return (
+    <div className="space-y-1 pt-1">
+      <div className="flex items-center justify-between text-[10px]">
+        <span className={`flex items-center gap-0.5 font-semibold ${textColor}`}>
+          {atrasado
+            ? <><AlertTriangle className="h-2.5 w-2.5" /> Atrasado {elapsed - tempoEsperaMin} min</>
+            : <><Clock className="h-2.5 w-2.5" /> {elapsed} min</>}
+        </span>
+        <span className="text-muted-foreground">{elapsed}/{tempoEsperaMin} min</span>
+      </div>
+      <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+        <div
+          className={`h-full rounded-full transition-all duration-1000 ${barColor}`}
+          style={{ width: `${Math.min(ratio * 100, 100)}%` }}
+        />
+      </div>
+    </div>
+  )
+}
 
 const PAGAMENTO_LABEL: Record<FormaPagamento, string> = {
   dinheiro: 'Dinheiro',
@@ -66,6 +105,8 @@ export function OrderMonitor({ pedidos, onUpdate }: Props) {
   const [editando, setEditando] = useState<Pedido | null>(null)
   const [finalizadosAbertos, setFinalizadosAbertos] = useState(false)
   const { toast } = useToast()
+  const { status: storeStatus } = useStoreStatus()
+  const tempoEspera = storeStatus?.tempo_espera_padrao ?? 30
 
   async function handleAvancar(pedido: Pedido) {
     try {
@@ -116,6 +157,11 @@ export function OrderMonitor({ pedidos, onUpdate }: Props) {
         {/* Cliente e tipo */}
         <div>
           <p className="text-sm font-semibold leading-tight">{p.cliente}</p>
+          {p.phone && (
+            <p className="text-[11px] text-muted-foreground flex items-center gap-0.5 mt-0.5">
+              <Phone className="h-2.5 w-2.5" />{p.phone}
+            </p>
+          )}
           <div className="flex flex-wrap gap-1 mt-1">
             <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{entregaLabel}</Badge>
             <Badge variant="outline" className="text-[10px] px-1.5 py-0">{PAGAMENTO_LABEL[p.formapagamento]}</Badge>
@@ -149,6 +195,11 @@ export function OrderMonitor({ pedidos, onUpdate }: Props) {
             </div>
           ))}
         </div>
+
+        {/* Timer — só para pedidos ativos */}
+        {(p.status === 'Recebido' || p.status === 'Em preparo') && (
+          <OrderTimer createdAt={p.created_at} tempoEsperaMin={tempoEspera} />
+        )}
 
         {/* Ações */}
         <div className="flex gap-1.5 flex-wrap border-t pt-2">

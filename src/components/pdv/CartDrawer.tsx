@@ -5,7 +5,10 @@ import { normalizePedidoPayload, gerarCartKey } from '@/utils/pedido'
 import { validarTelefoneBrasileiro, formatarTelefone } from '@/utils/validation'
 import { formatBRL, calcTotal, calcTroco, calcItemPrice } from '@/utils/calc'
 import { criarPedido } from '@/services/api/pedidos.service'
-import { buscarClientePorTelefone, saveClienteSession, getClienteSession } from '@/services/api/clientes.service'
+import { notificarStatusPedido } from '@/services/whatsapp.service'
+import {
+  buscarClientePorTelefone, saveClienteSession, saveEnderecoSession, getClienteSession,
+} from '@/services/api/clientes.service'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
@@ -172,6 +175,10 @@ export function CartDrawer({ open, onClose, onSuccess, deliveryFee }: Props) {
       const totalSnapshot = total
       const clienteSnapshot = clienteEncontrado
       const enderecoSnapshot = { tipoentrega, endereco, numero, bairro }
+      const addressData = tipoentrega === 'entrega' && endereco.trim()
+        ? { tipoentrega, endereco, numero, bairro }
+        : undefined
+
       clear()
       setCliente('')
       setPhone('')
@@ -191,6 +198,13 @@ export function CartDrawer({ open, onClose, onSuccess, deliveryFee }: Props) {
         clienteEncontrado: clienteSnapshot,
         ...enderecoSnapshot,
       })
+
+      // Salva sessão local para pré-preencher no próximo pedido
+      // (o banco já cuida do cliente via trigger trg_pedido_registrar_cliente)
+      saveClienteSession(phoneSnapshot, nome)
+      if (addressData) {
+        saveEnderecoSession(addressData.tipoentrega, addressData.endereco, addressData.numero, addressData.bairro)
+      }
       if ((window as any).CopaFX) {
         ;(window as any).CopaFX.fireworks()
         setTimeout(() => { if ((window as any).CopaFX) (window as any).CopaFX.goal('É CAMPEÃO!') }, 700)
