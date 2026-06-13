@@ -170,6 +170,18 @@ export function CartDrawer({ open, onClose, onSuccess, deliveryFee }: Props) {
         total,
       })
 
+      // Envia confirmação via WhatsApp — fire-and-forget, não bloqueia o checkout
+      if (phone) {
+        void notificarStatusPedido({
+          phone,
+          customerName: cliente.trim().split(' ')[0],
+          orderId: pedidoId,
+          status: 'confirmed',
+          total,
+          items: items.map((i) => `${i.qty}x ${i.name}`),
+        })
+      }
+
       const nome = cliente.trim()
       const phoneSnapshot = phone
       const totalSnapshot = total
