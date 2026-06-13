@@ -35,7 +35,7 @@ export function SuccessModal({
 }: SuccessModalProps) {
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-sm p-0 overflow-hidden">
+      <DialogContent className="w-[calc(100%-2rem)] max-w-sm p-0 overflow-hidden rounded-2xl shadow-2xl">
         {/* Header verde */}
         <div className="bg-green-500 px-6 pt-8 pb-6 flex flex-col items-center gap-2 text-center text-white">
           <div className="rounded-full bg-white/20 p-3">

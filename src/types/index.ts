@@ -30,6 +30,13 @@ export type CartItem = {
 }
 
 export type PedidoStatus = 'Recebido' | 'Em preparo' | 'Finalizado' | 'Cancelado'
+
+export type PedidoStatusLog = {
+  id: string
+  pedido_id: string
+  status: PedidoStatus
+  changed_at: string
+}
 export type TipoEntrega = 'retirada' | 'entrega' | 'local'
 export type FormaPagamento = 'dinheiro' | 'cartao' | 'pix'
 

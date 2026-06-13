@@ -7,8 +7,8 @@ const DSEP = '='.repeat(COL)
 // --- Dados da lanchonete (edite aqui) ---
 const STORE = {
   nome: 'LUIZÃO LANCHES',
-  cnpj: '12.805.279/0001-03',
-  endereco: 'Rua Exemplo, 123 - São Paulo/SP',
+  cnpj: '20.348.220/0001-18',
+  endereco: 'Avenida Delfim Moreira 700 - Ouro Fino/MG',
 }
 
 function pad(left: string, right: string, total = COL): string {

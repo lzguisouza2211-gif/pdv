@@ -1,6 +1,10 @@
 import { supabase } from '@/services/supabaseClient'
 import { Pedido, PedidoStatus } from '@/types'
 
+async function registrarStatusLog(pedidoId: string, status: PedidoStatus): Promise<void> {
+  await supabase.from('pedido_status_log').insert({ pedido_id: pedidoId, status })
+}
+
 type PedidoPayload = Omit<Pedido, 'id' | 'created_at' | 'updated_at' | 'status'>
 
 export async function criarPedido(payload: PedidoPayload): Promise<string> {
@@ -11,6 +15,7 @@ export async function criarPedido(payload: PedidoPayload): Promise<string> {
     .single()
 
   if (error) throw error
+  await registrarStatusLog(data.id as string, 'Recebido')
   return data.id as string
 }
 
@@ -70,6 +75,7 @@ export async function cancelarPedido(pedido: Pedido): Promise<void> {
     .update({ status: 'Cancelado' })
     .eq('id', pedido.id)
   if (error) throw error
+  await registrarStatusLog(pedido.id, 'Cancelado')
 }
 
 export async function avancarStatus(pedido: Pedido): Promise<void> {
@@ -88,4 +94,5 @@ export async function avancarStatus(pedido: Pedido): Promise<void> {
     .eq('id', pedido.id)
 
   if (error) throw error
+  await registrarStatusLog(pedido.id, nextStatus)
 }
