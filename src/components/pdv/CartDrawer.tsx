@@ -5,7 +5,6 @@ import { normalizePedidoPayload, gerarCartKey } from '@/utils/pedido'
 import { validarTelefoneBrasileiro, formatarTelefone } from '@/utils/validation'
 import { formatBRL, calcTotal, calcTroco, calcItemPrice } from '@/utils/calc'
 import { criarPedido } from '@/services/api/pedidos.service'
-import { notificarStatusPedido } from '@/services/whatsapp.service'
 import {
   buscarClientePorTelefone, saveClienteSession, saveEnderecoSession, getClienteSession,
 } from '@/services/api/clientes.service'
@@ -169,18 +168,6 @@ export function CartDrawer({ open, onClose, onSuccess, deliveryFee }: Props) {
         taxa_entrega: taxa,
         total,
       })
-
-      // Envia confirmação via WhatsApp — fire-and-forget, não bloqueia o checkout
-      if (phone) {
-        void notificarStatusPedido({
-          phone,
-          customerName: cliente.trim().split(' ')[0],
-          orderId: pedidoId,
-          status: 'confirmed',
-          total,
-          items: items.map((i) => `${i.qty}x ${i.name}`),
-        })
-      }
 
       const nome = cliente.trim()
       const phoneSnapshot = phone
