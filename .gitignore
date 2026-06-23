@@ -14,3 +14,5 @@ electron/main/credentials.js
 # Sessão WhatsApp — dados sensíveis, nunca commitar
 auth_info_baileys/
 **/auth_info_baileys/
+
+credentials.ts

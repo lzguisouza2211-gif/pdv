@@ -23,7 +23,7 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "printer": "node printer-backend.js",
-    "electron:compile": "tsc -p tsconfig.electron.json && tsc -p tsconfig.preload.json && node scripts/postbuild-electron.mjs",
+    "electron:compile": "node scripts/generate-credentials.mjs && tsc -p tsconfig.electron.json && tsc -p tsconfig.preload.json && node scripts/postbuild-electron.mjs",
     "electron:dev": "npm run electron:compile && concurrently -k --names \"VITE,TSC,PRE,ELECTRON\" --prefix-colors \"cyan,yellow,magenta,green\" \"vite\" \"tsc -p tsconfig.electron.json -w --preserveWatchOutput\" \"tsc -p tsconfig.preload.json -w --preserveWatchOutput\" \"wait-on tcp:5173 && electronmon .\"",
     "electron:build": "node scripts/generate-credentials.mjs && ELECTRON=true vite build && tsc -p tsconfig.electron.json && tsc -p tsconfig.preload.json && node scripts/postbuild-electron.mjs",
     "electron:build:win": "node scripts/generate-credentials.mjs && cross-env ELECTRON=true vite build && tsc -p tsconfig.electron.json && tsc -p tsconfig.preload.json && node scripts/postbuild-electron.mjs",

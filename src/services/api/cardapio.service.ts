@@ -21,6 +21,13 @@ type RawAdicional = {
   ordem: number
 }
 
+type CreateProductInput = {
+  nome: string
+  preco: number
+  categoria: string
+  descricao?: string
+}
+
 export async function fetchCardapio(): Promise<ItemCardapio[]> {
   const { data, error } = await supabase
     .from('cardapio')
@@ -101,6 +108,54 @@ export async function updateProductPreco(
     .update({ preco })
     .eq('id', id)
   if (error) throw error
+}
+
+export async function updateProductBasic(
+  id: string,
+  updates: { nome: string; preco: number }
+): Promise<void> {
+  const { error } = await supabase
+    .from('cardapio')
+    .update({ nome: updates.nome, preco: updates.preco })
+    .eq('id', id)
+  if (error) throw error
+}
+
+export async function deleteProduct(id: string): Promise<void> {
+  const { error } = await supabase.from('cardapio').delete().eq('id', id)
+  if (error) throw error
+}
+
+export async function createProduct(input: CreateProductInput): Promise<ItemCardapio> {
+  const { data, error } = await supabase
+    .from('cardapio')
+    .insert({
+      nome: input.nome,
+      preco: input.preco,
+      categoria: input.categoria,
+      descricao: input.descricao?.trim() || null,
+      ativo: true,
+      disponivel: true,
+      ingredientes: [],
+    })
+    .select('*')
+    .single()
+
+  if (error) throw error
+
+  const row = data as RawCardapio
+  return {
+    id: String(row.id),
+    nome: row.nome,
+    preco: row.preco,
+    categoria: row.categoria,
+    ativo: row.ativo,
+    disponivel: row.disponivel,
+    descricao: row.descricao ?? undefined,
+    ingredientes: row.ingredientes ?? [],
+    ingredientes_indisponiveis: [],
+    proibeGratuidade: false,
+  }
 }
 
 export async function upsertAdicional(

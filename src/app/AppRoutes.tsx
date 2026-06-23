@@ -37,7 +37,7 @@ function AdminLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-muted/30">
-      <header className="bg-white border-b sticky top-0 z-30">
+      <header className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/85">
         <div className="max-w-6xl mx-auto px-4">
           <div className="flex items-center justify-between py-2 gap-2">
             <span className="font-bold text-primary shrink-0">Luizão Admin</span>
@@ -49,7 +49,7 @@ function AdminLayout({ children }: { children: React.ReactNode }) {
             value={tabValue}
             onValueChange={(v) => navigate(`/admin/${v === 'dashboard' ? '' : v}`)}
           >
-            <TabsList className="w-full grid grid-cols-9 mb-2">
+            <TabsList className="admin-nav-tabs w-full grid grid-cols-9 mb-2">
               <TabsTrigger value="dashboard" className="text-xs sm:text-sm">Dashboard</TabsTrigger>
               <TabsTrigger value="cardapio" className="text-xs sm:text-sm">Cardápio</TabsTrigger>
               <TabsTrigger value="pedidos" className="text-xs sm:text-sm">Pedidos</TabsTrigger>
@@ -72,7 +72,11 @@ function AdminLayout({ children }: { children: React.ReactNode }) {
           </Tabs>
         </div>
       </header>
-      <main className="max-w-6xl mx-auto px-4 py-6">{children}</main>
+      <main className="max-w-6xl mx-auto px-4 py-6 min-h-[calc(100vh-84px)]">
+        <div key={location.pathname} className="admin-route-transition">
+          {children}
+        </div>
+      </main>
     </div>
   )
 }

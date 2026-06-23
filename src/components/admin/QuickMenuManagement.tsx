@@ -1,22 +1,40 @@
 import { useEffect, useState } from 'react'
 import { ItemCardapio } from '@/types'
-import { fetchCardapio, updateProductDisponivel, updateProductPreco } from '@/services/api/cardapio.service'
+import { fetchCardapio, updateProductDisponivel, updateProductBasic, deleteProduct } from '@/services/api/cardapio.service'
 import { Switch } from '@/components/ui/switch'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { formatBRL } from '@/utils/calc'
-import { ChevronDown, Pencil, Search, X, ChevronsUpDown } from 'lucide-react'
+import { ChevronDown, Pencil, Search, X, ChevronsUpDown, Trash2 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 
-export function QuickMenuManagement() {
+interface Props {
+  reloadSignal?: number
+}
+
+export function QuickMenuManagement({ reloadSignal = 0 }: Props) {
   const [itens, setItens] = useState<ItemCardapio[]>([])
-  const [editingPreco, setEditingPreco] = useState<Record<string, string>>({})
+  const [editingItem, setEditingItem] = useState<Record<string, { nome: string; preco: string }>>({})
   const [expandedCats, setExpandedCats] = useState<Set<string>>(new Set())
   const [toggling, setToggling] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState<string | null>(null)
+  const [deleteCandidate, setDeleteCandidate] = useState<ItemCardapio | null>(null)
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
   const { toast } = useToast()
+
+  function formatBRLInput(value: string): string {
+    const digits = value.replace(/\D/g, '')
+    if (!digits) return ''
+    const amount = Number(digits) / 100
+    return amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+  }
+
+  function formatBRLFromNumber(value: number): string {
+    return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+  }
 
   useEffect(() => {
     fetchCardapio()
@@ -26,7 +44,7 @@ export function QuickMenuManagement() {
       })
       .catch(() => {})
       .finally(() => setLoading(false))
-  }, [])
+  }, [reloadSignal])
 
   function toggleCat(cat: string) {
     setExpandedCats((prev) => {
@@ -63,23 +81,68 @@ export function QuickMenuManagement() {
     }
   }
 
-  async function handleSavePreco(id: string) {
-    const raw = editingPreco[id]
-    if (!raw) return
-    const preco = parseFloat(raw.replace(',', '.'))
-    if (isNaN(preco) || preco <= 0) return
+  function startEdit(item: ItemCardapio) {
+    setEditingItem((prev) => ({
+      ...prev,
+      [item.id]: {
+        nome: item.nome,
+        preco: formatBRLFromNumber(item.preco),
+      },
+    }))
+  }
+
+  async function handleSaveItem(id: string) {
+    const current = editingItem[id]
+    if (!current) return
+
+    const nome = current.nome.trim()
+    const preco = Number(current.preco.replace(/\D/g, '')) / 100
+    if (!nome || Number.isNaN(preco) || preco <= 0) {
+      toast({
+        title: 'Dados inválidos',
+        description: 'Informe nome e preço válidos.',
+        variant: 'destructive',
+      })
+      return
+    }
+
     try {
-      await updateProductPreco(id, preco)
-      setItens((prev) => prev.map((i) => (i.id === id ? { ...i, preco } : i)))
-      setEditingPreco((prev) => { const n = { ...prev }; delete n[id]; return n })
-      toast({ title: 'Preço atualizado' })
+      await updateProductBasic(id, { nome, preco })
+      setItens((prev) => prev.map((i) => (i.id === id ? { ...i, nome, preco } : i)))
+      setEditingItem((prev) => { const n = { ...prev }; delete n[id]; return n })
+      toast({ title: 'Produto atualizado' })
     } catch {
-      toast({ title: 'Erro ao atualizar preço', variant: 'destructive' })
+      toast({ title: 'Erro ao atualizar produto', variant: 'destructive' })
     }
   }
 
   function cancelEdit(id: string) {
-    setEditingPreco((prev) => { const n = { ...prev }; delete n[id]; return n })
+    setEditingItem((prev) => { const n = { ...prev }; delete n[id]; return n })
+  }
+
+  function requestDelete(item: ItemCardapio) {
+    setDeleteCandidate(item)
+  }
+
+  async function handleDeleteConfirm() {
+    if (!deleteCandidate) return
+
+    setDeleting(deleteCandidate.id)
+    try {
+      await deleteProduct(deleteCandidate.id)
+      setItens((prev) => prev.filter((i) => i.id !== deleteCandidate.id))
+      setEditingItem((prev) => {
+        const n = { ...prev }
+        delete n[deleteCandidate.id]
+        return n
+      })
+      toast({ title: 'Produto excluído com sucesso' })
+      setDeleteCandidate(null)
+    } catch {
+      toast({ title: 'Erro ao excluir produto', variant: 'destructive' })
+    } finally {
+      setDeleting(null)
+    }
   }
 
   if (loading) {
@@ -93,6 +156,7 @@ export function QuickMenuManagement() {
   }
 
   return (
+    <>
     <div className="space-y-4">
       {/* Barra de busca + toggle */}
       <div className="flex gap-2">
@@ -157,9 +221,22 @@ export function QuickMenuManagement() {
                       >
                         {/* Nome + switch */}
                         <div className="flex items-start gap-2">
-                          <p className={`flex-1 min-w-0 text-sm font-semibold leading-snug capitalize ${!item.disponivel ? 'line-through text-muted-foreground' : ''}`}>
-                            {item.nome}
-                          </p>
+                          {editingItem[item.id] !== undefined ? (
+                            <Input
+                              className="h-8 text-sm flex-1 min-w-0"
+                              value={editingItem[item.id].nome}
+                              onChange={(e) =>
+                                setEditingItem((prev) => ({
+                                  ...prev,
+                                  [item.id]: { ...prev[item.id], nome: e.target.value },
+                                }))
+                              }
+                            />
+                          ) : (
+                            <p className={`flex-1 min-w-0 text-sm font-semibold leading-snug capitalize ${!item.disponivel ? 'line-through text-muted-foreground' : ''}`}>
+                              {item.nome}
+                            </p>
+                          )}
                           <Switch
                             checked={item.disponivel}
                             disabled={toggling === item.id}
@@ -169,21 +246,24 @@ export function QuickMenuManagement() {
                         </div>
 
                         {/* Preço */}
-                        {editingPreco[item.id] !== undefined ? (
+                        {editingItem[item.id] !== undefined ? (
                           <div className="flex items-center gap-1.5">
                             <Input
                               className="h-7 text-xs flex-1 min-w-0"
-                              value={editingPreco[item.id]}
-                              autoFocus
+                              value={editingItem[item.id].preco}
+                              inputMode="numeric"
                               onChange={(e) =>
-                                setEditingPreco((prev) => ({ ...prev, [item.id]: e.target.value }))
+                                setEditingItem((prev) => ({
+                                  ...prev,
+                                  [item.id]: { ...prev[item.id], preco: formatBRLInput(e.target.value) },
+                                }))
                               }
                               onKeyDown={(e) => {
-                                if (e.key === 'Enter') handleSavePreco(item.id)
+                                if (e.key === 'Enter') handleSaveItem(item.id)
                                 if (e.key === 'Escape') cancelEdit(item.id)
                               }}
                             />
-                            <Button size="sm" className="h-7 px-2 text-xs shrink-0" onClick={() => handleSavePreco(item.id)}>
+                            <Button size="sm" className="h-7 px-2 text-xs shrink-0" onClick={() => handleSaveItem(item.id)}>
                               OK
                             </Button>
                             <Button size="sm" variant="ghost" className="h-7 px-2 text-xs shrink-0" onClick={() => cancelEdit(item.id)}>
@@ -191,15 +271,26 @@ export function QuickMenuManagement() {
                             </Button>
                           </div>
                         ) : (
-                          <button
-                            className="flex items-center gap-1 text-sm font-medium text-primary w-fit hover:underline"
-                            onClick={() =>
-                              setEditingPreco((prev) => ({ ...prev, [item.id]: String(item.preco) }))
-                            }
-                          >
-                            {formatBRL(item.preco)}
-                            <Pencil className="h-3 w-3 opacity-60" />
-                          </button>
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-sm font-medium text-primary">{formatBRL(item.preco)}</span>
+                            <div className="flex items-center gap-1">
+                              <button
+                                className="h-7 w-7 rounded border flex items-center justify-center hover:bg-muted"
+                                onClick={() => startEdit(item)}
+                                aria-label={`Editar ${item.nome}`}
+                              >
+                                <Pencil className="h-3.5 w-3.5 opacity-70" />
+                              </button>
+                              <button
+                                className="h-7 w-7 rounded border border-destructive/40 text-destructive flex items-center justify-center hover:bg-destructive/10"
+                                onClick={() => requestDelete(item)}
+                                disabled={deleting === item.id}
+                                aria-label={`Excluir ${item.nome}`}
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          </div>
                         )}
                       </div>
                     ))}
@@ -211,5 +302,37 @@ export function QuickMenuManagement() {
         </div>
       )}
     </div>
+    <Dialog
+      open={!!deleteCandidate}
+      onOpenChange={(open) => {
+        if (!open && deleting === null) setDeleteCandidate(null)
+      }}
+    >
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle className="text-destructive">Excluir produto?</DialogTitle>
+        </DialogHeader>
+        <p className="text-sm text-muted-foreground">
+          {deleteCandidate ? `O item "${deleteCandidate.nome}" será removido definitivamente do banco.` : ''}
+        </p>
+        <DialogFooter className="gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setDeleteCandidate(null)}
+            disabled={deleting !== null}
+          >
+            Cancelar
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={handleDeleteConfirm}
+            disabled={deleting !== null}
+          >
+            {deleting !== null ? 'Excluindo...' : 'Excluir'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   )
 }
