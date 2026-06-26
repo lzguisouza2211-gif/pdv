@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { fetchPedidos } from '@/services/api/pedidos.service'
+import { supabase } from '@/services/supabaseClient'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts'
@@ -9,13 +10,14 @@ import { Badge } from '@/components/ui/badge'
 import { formatBRL } from '@/utils/calc'
 import {
   format, startOfMonth, subDays, subMonths, getDaysInMonth, getDate, getHours, getDay,
+  differenceInDays,
 } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { caixaEstaFechado } from '@/hooks/useCaixaAutomatico'
 import {
   TrendingUp, ShoppingBag, Receipt, QrCode, Banknote, CreditCard,
   CheckCircle2, Circle, Printer, ArrowUpRight, ArrowDownRight, Minus,
-  Clock, Star, Target, XCircle,
+  Clock, Star, Target, XCircle, CalendarDays,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
@@ -133,6 +135,7 @@ export function Financeiro() {
   const [loading, setLoading] = useState(true)
   const [erro, setErro] = useState<string | null>(null)
   const [caixaFechado, setCaixaFechado] = useState<boolean | null>(null)
+  const [diasDeOperacao, setDiasDeOperacao] = useState<number | null>(null)
 
   const hoje = format(new Date(), 'yyyy-MM-dd')
 
@@ -238,6 +241,20 @@ export function Financeiro() {
     checkCaixaStatus()
   }, [period, loadData, checkCaixaStatus])
 
+  useEffect(() => {
+    supabase
+      .from('pedidos')
+      .select('created_at')
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .single()
+      .then(({ data }) => {
+        if (data?.created_at) {
+          setDiasDeOperacao(differenceInDays(new Date(), new Date(data.created_at)))
+        }
+      })
+  }, [])
+
   const totalFaturamento = dailyData.reduce((s, d) => s + d.faturamento, 0)
   const totalPedidos = dailyData.reduce((s, d) => s + d.pedidos, 0)
   const ticketMedio = totalPedidos > 0 ? totalFaturamento / totalPedidos : 0
@@ -342,6 +359,12 @@ export function Financeiro() {
                 <Circle className="h-3 w-3 fill-blue-400" /> Caixa aberto
               </Badge>
             )
+          )}
+          {diasDeOperacao !== null && (
+            <Badge variant="outline" className="gap-1 text-muted-foreground">
+              <CalendarDays className="h-3 w-3" />
+              {diasDeOperacao === 0 ? 'Primeiro dia' : `${diasDeOperacao} dia${diasDeOperacao !== 1 ? 's' : ''} de operação`}
+            </Badge>
           )}
         </div>
         <div className="flex items-center gap-2">

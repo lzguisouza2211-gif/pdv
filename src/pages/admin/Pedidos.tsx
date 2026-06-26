@@ -192,7 +192,7 @@ export function Pedidos() {
                 {/* Linha 3: itens */}
                 <div className="text-sm text-muted-foreground leading-relaxed">
                   {p.itens.map((item, i) => (
-                    <span key={i}>{item.quantidade}x {item.nome}{i < p.itens.length - 1 ? ' · ' : ''}</span>
+                    <span key={i}>{item.quantidade} {item.nome}{i < p.itens.length - 1 ? ' · ' : ''}</span>
                   ))}
                 </div>
 
@@ -259,7 +259,7 @@ export function Pedidos() {
                   {pedidoVisualizando.itens.map((item, i) => (
                     <div key={i} className="border rounded-md p-2.5 text-sm">
                       <div className="flex justify-between font-medium">
-                        <span>{item.quantidade}x {item.nome}</span>
+                        <span>{item.quantidade} {item.nome}</span>
                         <span className="text-primary">{formatBRL(item.preco * item.quantidade)}</span>
                       </div>
                       {item.adicionais && item.adicionais.length > 0 && (

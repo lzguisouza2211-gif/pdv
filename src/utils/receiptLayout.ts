@@ -3,6 +3,8 @@ import { Pedido } from '@/types'
 const COL = 48
 const SEP = '-'.repeat(COL)
 const DSEP = '='.repeat(COL)
+const BOLD_ON  = '\x1B\x45\x01'
+const BOLD_OFF = '\x1B\x45\x00'
 
 // --- Dados da lanchonete (edite aqui) ---
 const STORE = {
@@ -60,6 +62,7 @@ export function buildProductionReceipt(pedido: Pedido): string {
     DSEP,
     pad(`PEDIDO: #${pedido.id}`, `${date} - ${time}`),
     pad(`TIPO: ${tipo}`, 'Mesa/Balcão: ---'),
+    `CLIENTE: ${pedido.cliente}`,
     DSEP,
   ]
 
@@ -81,13 +84,17 @@ export function buildProductionReceipt(pedido: Pedido): string {
     const basePreco = item.preco - adicionaisSum
     const itemTotal = item.preco * item.quantidade
     total += itemTotal
-    lines.push(pad(`- ${item.quantidade}x ${item.nome}`, fmtR$(basePreco * item.quantidade)))
+    lines.push(BOLD_ON + pad(`- ${item.quantidade} ${item.nome}`, fmtR$(basePreco * item.quantidade)) + BOLD_OFF)
     for (const r of item.retirados) lines.push(`  (SEM ${r.nome.toUpperCase()})`)
     for (const a of item.adicionais ?? []) {
       const aqty = a.qty ?? 1
       const addTotal = a.preco * aqty * item.quantidade
       const label = aqty > 1 ? `${aqty}x ${a.nome}` : a.nome
-      lines.push(pad(`  (COM ${label.toUpperCase()})`, fmtR$(addTotal)))
+      if (addTotal > 0) {
+        lines.push(pad(`  (COM ${label.toUpperCase()})`, fmtR$(addTotal)))
+      } else {
+        lines.push(`  ${label.toUpperCase()}`)
+      }
     }
     if (item.observacoes) lines.push(`  Obs: ${item.observacoes}`)
   }
@@ -141,14 +148,18 @@ export function buildDeliveryReceipt(pedido: Pedido): string {
     const baseTotal = basePreco * item.quantidade
     subtotal += baseTotal
     qtdItens += item.quantidade
-    lines.push(pad(`${item.quantidade}x ${item.nome}`, fmtR$(baseTotal)))
+    lines.push(BOLD_ON + pad(`${item.quantidade} ${item.nome}`, fmtR$(baseTotal)) + BOLD_OFF)
     for (const r of item.retirados) lines.push(`  - Sem ${r.nome}`)
     for (const a of item.adicionais ?? []) {
       const aqty = a.qty ?? 1
       const addTotal = a.preco * aqty * item.quantidade
       subtotal += addTotal
       const label = aqty > 1 ? `${aqty}x ${a.nome}` : a.nome
-      lines.push(pad(`  + ${label}`, fmtR$(addTotal)))
+      if (addTotal > 0) {
+        lines.push(pad(`  + ${label}`, fmtR$(addTotal)))
+      } else {
+        lines.push(`  ${label}`)
+      }
     }
     if (item.observacoes) lines.push(`  Obs: ${item.observacoes}`)
   }

@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react'
-import { ItemCardapio } from '@/types'
-import { fetchCardapio, updateProductDisponivel, updateProductBasic, deleteProduct } from '@/services/api/cardapio.service'
+import { ItemCardapio, Adicional } from '@/types'
+import {
+  fetchCardapio, updateProductDisponivel, updateProductBasic, deleteProduct,
+  fetchAdicionaisByProduct, upsertAdicional, deleteAdicional,
+} from '@/services/api/cardapio.service'
 import { Switch } from '@/components/ui/switch'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -9,6 +12,93 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { formatBRL } from '@/utils/calc'
 import { ChevronDown, Pencil, Search, X, ChevronsUpDown, Trash2 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+
+const CATS_COM_SABOR = new Set(['Bebidas'])
+
+function SaboresPanel({ productId }: { productId: string }) {
+  const [sabores, setSabores] = useState<Adicional[]>([])
+  const [novoNome, setNovoNome] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [adicionando, setAdicionando] = useState(false)
+  const { toast } = useToast()
+
+  useEffect(() => {
+    fetchAdicionaisByProduct(productId)
+      .then((all) => setSabores(all.filter((a) => a.preco === 0)))
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [productId])
+
+  async function handleAdd() {
+    const nome = novoNome.trim()
+    if (!nome) return
+    setAdicionando(true)
+    try {
+      await upsertAdicional({ product_id: productId, nome, preco: 0, ativo: true, ordem: sabores.length + 1 })
+      const updated = await fetchAdicionaisByProduct(productId)
+      setSabores(updated.filter((a) => a.preco === 0))
+      setNovoNome('')
+    } catch {
+      toast({ title: 'Erro ao adicionar sabor', variant: 'destructive' })
+    } finally {
+      setAdicionando(false)
+    }
+  }
+
+  async function handleDelete(id: string) {
+    try {
+      await deleteAdicional(id)
+      setSabores((prev) => prev.filter((s) => s.id !== id))
+    } catch {
+      toast({ title: 'Erro ao remover sabor', variant: 'destructive' })
+    }
+  }
+
+  if (loading) return <p className="text-xs text-muted-foreground pt-2 border-t">Carregando sabores…</p>
+
+  return (
+    <div className="pt-2 border-t space-y-2">
+      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Sabores</p>
+      <div className="flex flex-wrap gap-1.5">
+        {sabores.length === 0 && (
+          <span className="text-xs text-muted-foreground italic">Nenhum sabor cadastrado</span>
+        )}
+        {sabores.map((s) => (
+          <span
+            key={s.id}
+            className="inline-flex items-center gap-1 text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full"
+          >
+            {s.nome}
+            <button
+              onClick={() => handleDelete(s.id)}
+              className="hover:text-red-500 transition-colors"
+              aria-label={`Remover ${s.nome}`}
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </span>
+        ))}
+      </div>
+      <div className="flex gap-1.5">
+        <Input
+          placeholder="Novo sabor…"
+          value={novoNome}
+          onChange={(e) => setNovoNome(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') handleAdd() }}
+          className="h-7 text-xs flex-1"
+        />
+        <Button
+          size="sm"
+          className="h-7 px-3 text-xs shrink-0"
+          onClick={handleAdd}
+          disabled={adicionando || !novoNome.trim()}
+        >
+          + Adicionar
+        </Button>
+      </div>
+    </div>
+  )
+}
 
 interface Props {
   reloadSignal?: number
@@ -291,6 +381,10 @@ export function QuickMenuManagement({ reloadSignal = 0 }: Props) {
                               </button>
                             </div>
                           </div>
+                        )}
+
+                        {CATS_COM_SABOR.has(item.categoria) && editingItem[item.id] === undefined && (
+                          <SaboresPanel productId={item.id} />
                         )}
                       </div>
                     ))}

@@ -76,6 +76,7 @@ export function ProductCustomizationModal({
   const [retiradas, setRetiradas] = useState<string[]>([])
   const [addQtys, setAddQtys] = useState<Record<string, number>>({})
   const [selectedRem, setSelectedRem] = useState<Set<string>>(new Set())
+  const [selectedSabor, setSelectedSabor] = useState<string | null>(null)
   const [observacoes, setObservacoes] = useState('')
   const [qty, setItemQty] = useState(initialQty ?? 1)
   const [loading, setLoading] = useState(false)
@@ -96,6 +97,7 @@ export function ProductCustomizationModal({
     if (!item || !open) return
     setAddQtys(initialAddQtys ?? {})
     setSelectedRem(initialSelectedRem ? new Set(initialSelectedRem) : new Set())
+    setSelectedSabor(null)
     setObservacoes(initialObservacoes ?? '')
     setItemQty(initialQty ?? 1)
     setAddOpen(false)
@@ -126,9 +128,13 @@ export function ProductCustomizationModal({
     })
   }
 
+  const sabores = adicionais.filter((a) => a.preco === 0)
+  const paidAdicionais = adicionais.filter((a) => a.preco > 0)
+
   function handleConfirm() {
     const extras: ExtraOption[] = [
-      ...adicionais
+      ...(selectedSabor ? [{ nome: selectedSabor, preco: 0, tipo: 'add' as const, qty: 1 }] : []),
+      ...paidAdicionais
         .filter((a) => (addQtys[a.nome] ?? 0) > 0)
         .map((a) => ({ nome: a.nome, preco: a.preco, tipo: 'add' as const, qty: addQtys[a.nome] })),
       ...[...selectedRem].map((nome) => ({ nome, preco: 0, tipo: 'remove' as const })),
@@ -138,7 +144,7 @@ export function ProductCustomizationModal({
   }
 
   const totalAddQty = Object.values(addQtys).reduce((s, q) => s + (q > 0 ? q : 0), 0)
-  const addTotal = adicionais
+  const addTotal = paidAdicionais
     .filter((a) => (addQtys[a.nome] ?? 0) > 0)
     .reduce((s, a) => s + a.preco * (addQtys[a.nome] ?? 0), 0)
   const totalItem = item ? (item.preco + addTotal) * qty : 0
@@ -205,14 +211,41 @@ export function ProductCustomizationModal({
             <p className="text-center py-6 text-muted-foreground">Carregando opções…</p>
           ) : (
             <>
-              {adicionais.length > 0 && (
+              {sabores.length > 0 && (
+                <div className="border-2 rounded-2xl px-4 py-3.5 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-sm">Sabor</span>
+                    {!selectedSabor && (
+                      <span className="text-xs text-destructive font-medium">Obrigatório</span>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {sabores.map((s) => (
+                      <button
+                        key={s.id}
+                        type="button"
+                        onClick={() => setSelectedSabor(selectedSabor === s.nome ? null : s.nome)}
+                        className={`px-3 py-1.5 rounded-full border-2 text-sm font-medium transition-colors ${
+                          selectedSabor === s.nome
+                            ? 'bg-primary text-primary-foreground border-primary'
+                            : 'border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/30'
+                        }`}
+                      >
+                        {s.nome}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {paidAdicionais.length > 0 && (
                 <DropdownSection
                   title="Adicionais"
                   badgeCount={totalAddQty}
                   isOpen={addOpen}
                   onToggle={() => setAddOpen((v) => !v)}
                 >
-                  {adicionais.map((a) => {
+                  {paidAdicionais.map((a) => {
                     const q = addQtys[a.nome] ?? 0
                     const subtotal = a.preco * q
                     return (
@@ -314,7 +347,7 @@ export function ProductCustomizationModal({
         <div className="px-4 py-4 pb-safe border-t">
           <button
             onClick={handleConfirm}
-            disabled={loading}
+            disabled={loading || (sabores.length > 0 && !selectedSabor)}
             className="w-full bg-primary text-primary-foreground py-4 rounded-2xl font-bold text-base shadow-lg flex items-center justify-between px-5 disabled:opacity-60 active:scale-[0.98] transition-all"
           >
             <span>{confirmLabel ?? (qty > 1 ? `Adicionar ${qty}x` : 'Adicionar ao carrinho')}</span>

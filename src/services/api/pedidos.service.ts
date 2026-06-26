@@ -63,9 +63,14 @@ export async function fetchPedidos(
 
 export async function editarPedido(
   id: string,
-  updates: Partial<Pick<Pedido, 'formapagamento' | 'status' | 'cliente' | 'itens' | 'total' | 'taxa_entrega'>>
+  updates: Partial<Pick<Pedido, 'formapagamento' | 'status' | 'cliente' | 'itens' | 'total' | 'taxa_entrega' | 'tipoentrega'>>
 ): Promise<void> {
   const { error } = await supabase.from('pedidos').update(updates).eq('id', id)
+  if (error) throw error
+}
+
+export async function excluirPedido(id: string): Promise<void> {
+  const { error } = await supabase.from('pedidos').delete().eq('id', id)
   if (error) throw error
 }
 

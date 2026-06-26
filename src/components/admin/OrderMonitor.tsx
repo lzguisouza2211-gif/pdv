@@ -178,7 +178,7 @@ export function OrderMonitor({ pedidos, onUpdate }: Props) {
           {p.itens.map((item, i) => (
             <div key={i}>
               <div className="flex justify-between">
-                <span>{item.quantidade}x {item.nome}</span>
+                <span>{item.quantidade} {item.nome}</span>
                 <span className="text-muted-foreground">{formatBRL(item.preco * item.quantidade)}</span>
               </div>
               {item.adicionais && item.adicionais.length > 0 && (

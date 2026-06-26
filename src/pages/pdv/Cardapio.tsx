@@ -10,13 +10,13 @@ import { ProductCustomizationModal } from '@/components/pdv/ProductCustomization
 import { CartDrawer, CheckoutSuccess } from '@/components/pdv/CartDrawer'
 import { SuccessModal } from '@/components/pdv/SuccessModal'
 import { PhonePromptModal } from '@/components/pdv/PhonePromptModal'
-import { AlertTriangle, Clock, ChevronDown } from 'lucide-react'
+import { AlertTriangle, Clock } from 'lucide-react'
 import { gerarCartKey } from '@/utils/pedido'
 import { getClienteSession, hasSkippedPrompt } from '@/services/api/clientes.service'
 import { formatBRL } from '@/utils/calc'
 
 const CATEGORIA_ORDER = ['Lanches', 'Macarrão', 'Porções', 'Omeletes', 'Bebidas', 'Cervejas', 'Doces']
-const CUSTOM_CATS = new Set(['Lanches', 'Macarrão', 'Omeletes'])
+const CUSTOM_CATS = new Set(['Lanches', 'Macarrão', 'Omeletes', 'Bebidas'])
 
 const COPA_ITEM_NAMES_SET = new Set(['x-bacon', 'x-tudo', 'mineirão', 'batata c/ queijo e bacon', 'pernil e cebola'])
 
@@ -45,9 +45,8 @@ export function Cardapio() {
     () => !getClienteSession() && !hasSkippedPrompt()
   )
   const [activeCat, setActiveCat] = useState<string | null>(null)
-  const [catDropdownOpen, setCatDropdownOpen] = useState(false)
+  const [catSheetOpen, setCatSheetOpen] = useState(false)
   const catRefs = useRef<Record<string, HTMLDivElement | null>>({})
-  const pillRefs = useRef<Record<string, HTMLButtonElement | null>>({})
 
   const storeOpen = status?.is_open ?? true
   const tempoEspera = status?.tempo_espera_padrao ?? 30
@@ -101,13 +100,6 @@ export function Cardapio() {
     return () => window.removeEventListener('scroll', updateActiveCat)
   }, [updateActiveCat])
 
-  // Mantém pill ativo visível na barra
-  useEffect(() => {
-    if (!activeCat) return
-    pillRefs.current[activeCat]?.scrollIntoView({
-      behavior: 'smooth', block: 'nearest', inline: 'center',
-    })
-  }, [activeCat])
 
   // Scroll manual — mais confiável que scrollIntoView+scrollMarginTop no mobile
   function scrollToCategory(cat: string) {
@@ -424,60 +416,136 @@ export function Cardapio() {
         </div>
       </div>
 
-      {/* ── Category dropdown (sticky) ───────────────────────── */}
-      {!loading && !error && categorias.length > 0 && (
-        <div className="sticky top-0 z-20 bg-white border-b border-[#ECECEF]">
-          <div className="px-4 py-2">
+      {/* ── Category nav (sticky trigger) ────────────────────── */}
+      {!loading && !error && categorias.length > 0 && (() => {
+        const activeMeta = activeCat ? (CATEGORIA_META[activeCat] ?? { emoji: '🍽️', tint: '#F0F0F0' }) : null
+        return (
+          <div style={{
+            position: 'sticky', top: 0, zIndex: 20,
+            background: '#fff',
+            borderBottom: '1px solid #ECECEF',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.07)',
+            padding: '10px 16px',
+          }}>
             <button
-              onClick={() => setCatDropdownOpen((v) => !v)}
-              className="flex items-center justify-between w-full bg-muted px-4 py-2.5 rounded-full text-sm font-semibold transition-colors hover:bg-muted/80"
-              style={{ WebkitTapHighlightColor: 'transparent' }}
+              onClick={() => setCatSheetOpen(true)}
+              style={{
+                width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                background: 'linear-gradient(135deg, #F4581C 0%, #e04010 100%)',
+                border: 'none', borderRadius: 14,
+                padding: '12px 18px', cursor: 'pointer',
+                WebkitTapHighlightColor: 'transparent',
+                boxShadow: '0 4px 14px rgba(244,88,28,0.35)',
+              }}
             >
-              <span className="flex items-center gap-2">
-                {activeCat ? (
-                  <>
-                    <span className="w-2 h-2 rounded-full bg-primary" />
-                    {activeCat}
-                  </>
-                ) : (
-                  'Categorias'
-                )}
-              </span>
-              <ChevronDown
-                className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${catDropdownOpen ? 'rotate-180' : ''}`}
-              />
-            </button>
-
-            {catDropdownOpen && (
-              <>
-                <div
-                  className="fixed inset-0 z-10"
-                  onClick={() => setCatDropdownOpen(false)}
-                />
-                <div className="absolute left-4 right-4 top-full mt-1 z-20 bg-background border-2 rounded-2xl shadow-xl overflow-hidden">
-                  {categorias.map((cat) => (
-                    <button
-                      key={cat}
-                      ref={(el) => { pillRefs.current[cat] = el }}
-                      onClick={() => { scrollToCategory(cat); setCatDropdownOpen(false) }}
-                      className={`w-full text-left px-4 py-3 text-sm font-semibold transition-colors border-b last:border-0 flex items-center gap-3 ${
-                        activeCat === cat
-                          ? 'text-primary bg-primary/5'
-                          : 'hover:bg-muted/50'
-                      }`}
-                      style={{ WebkitTapHighlightColor: 'transparent' }}
-                    >
-                      {activeCat === cat && (
-                        <span className="w-2 h-2 rounded-full bg-primary flex-shrink-0" />
-                      )}
-                      <span className={activeCat === cat ? '' : 'ml-5'}>{cat}</span>
-                    </button>
-                  ))}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontSize: 20 }}>{activeMeta?.emoji ?? '🍽️'}</span>
+                <div style={{ textAlign: 'left' }}>
+                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.75)', fontWeight: 600, lineHeight: 1 }}>
+                    Navegando em
+                  </div>
+                  <div style={{ fontSize: 15, color: '#fff', fontWeight: 800, lineHeight: 1.3 }}>
+                    {activeCat ?? 'Cardápio'}
+                  </div>
                 </div>
-              </>
-            )}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ color: 'rgba(255,255,255,0.85)', fontSize: 12, fontWeight: 700 }}>
+                  Ver tudo
+                </span>
+                <div style={{
+                  width: 28, height: 28, borderRadius: 8,
+                  background: 'rgba(255,255,255,0.2)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                    <rect x="1" y="2" width="5" height="4" rx="1" fill="#fff"/>
+                    <rect x="8" y="2" width="5" height="4" rx="1" fill="#fff"/>
+                    <rect x="1" y="8" width="5" height="4" rx="1" fill="#fff"/>
+                    <rect x="8" y="8" width="5" height="4" rx="1" fill="#fff"/>
+                  </svg>
+                </div>
+              </div>
+            </button>
           </div>
-        </div>
+        )
+      })()}
+
+      {/* ── Category bottom sheet ─────────────────────────────── */}
+      {catSheetOpen && (
+        <>
+          <div
+            onClick={() => setCatSheetOpen(false)}
+            style={{
+              position: 'fixed', inset: 0, zIndex: 40,
+              background: 'rgba(0,0,0,0.45)',
+              backdropFilter: 'blur(2px)',
+            }}
+          />
+          <div style={{
+            position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 50,
+            background: '#fff',
+            borderTopLeftRadius: 24, borderTopRightRadius: 24,
+            padding: '0 0 32px',
+            boxShadow: '0 -8px 32px rgba(0,0,0,0.18)',
+            maxHeight: '75vh', overflowY: 'auto',
+          }}>
+            {/* Handle */}
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 4px' }}>
+              <div style={{ width: 40, height: 4, borderRadius: 999, background: '#E5E7EB' }} />
+            </div>
+
+            <div style={{ padding: '8px 20px 16px', borderBottom: '1px solid #F3F4F6' }}>
+              <p style={{ margin: 0, fontSize: 18, fontWeight: 800, color: '#16202E' }}>
+                Categorias
+              </p>
+            </div>
+
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(3, 1fr)',
+              gap: 10,
+              padding: '16px 16px 0',
+            }}>
+              {categorias.map((cat) => {
+                const meta = CATEGORIA_META[cat] ?? { emoji: '🍽️', tint: '#F5F5F5' }
+                const isActive = activeCat === cat
+                return (
+                  <button
+                    key={cat}
+                    onClick={() => { scrollToCategory(cat); setCatSheetOpen(false) }}
+                    style={{
+                      display: 'flex', flexDirection: 'column',
+                      alignItems: 'center', justifyContent: 'center',
+                      gap: 8, padding: '16px 8px',
+                      borderRadius: 16,
+                      border: isActive ? '2.5px solid #F4581C' : '2px solid transparent',
+                      background: isActive ? '#FFF3EF' : meta.tint,
+                      cursor: 'pointer',
+                      WebkitTapHighlightColor: 'transparent',
+                      transition: 'transform 0.1s',
+                    }}
+                  >
+                    <span style={{ fontSize: 32, lineHeight: 1 }}>{meta.emoji}</span>
+                    <span style={{
+                      fontSize: 12.5, fontWeight: 700,
+                      color: isActive ? '#F4581C' : '#374151',
+                      textAlign: 'center', lineHeight: 1.2,
+                    }}>
+                      {cat}
+                    </span>
+                    {isActive && (
+                      <div style={{
+                        width: 6, height: 6, borderRadius: 999,
+                        background: '#F4581C',
+                      }} />
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        </>
       )}
 
       {/* ── Menu sections ────────────────────────────────────── */}

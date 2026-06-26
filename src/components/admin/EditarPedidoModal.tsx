@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { Pedido, PedidoStatus, FormaPagamento, PedidoItem, ItemCardapio, ExtraOption } from '@/types'
-import { editarPedido, cancelarPedido } from '@/services/api/pedidos.service'
+import { Pedido, PedidoStatus, FormaPagamento, PedidoItem, ItemCardapio, ExtraOption, TipoEntrega } from '@/types'
+import { editarPedido, cancelarPedido, excluirPedido } from '@/services/api/pedidos.service'
 import { notificarStatusPedido } from '@/services/whatsapp.service'
 import { useCardapio } from '@/hooks/useCardapio'
 import { useToast } from '@/hooks/use-toast'
@@ -14,7 +14,7 @@ import { Label } from '@/components/ui/label'
 import { Plus, Minus, Trash2, ChevronDown } from 'lucide-react'
 import { ProductCustomizationModal } from '@/components/pdv/ProductCustomizationModal'
 
-const CUSTOM_CATS = new Set(['Lanches', 'Macarrão', 'Omeletes'])
+const CUSTOM_CATS = new Set(['Lanches', 'Macarrão', 'Omeletes', 'Bebidas'])
 
 const FORMAS: { value: FormaPagamento; label: string }[] = [
   { value: 'dinheiro', label: 'Dinheiro' },
@@ -38,10 +38,13 @@ export function EditarPedidoModal({ pedido, onClose, onSaved }: Props) {
   const [cliente, setCliente] = useState('')
   const [formaPagamento, setFormaPagamento] = useState<FormaPagamento>('dinheiro')
   const [status, setStatus] = useState<PedidoStatus>('Recebido')
+  const [tipoEntrega, setTipoEntrega] = useState<TipoEntrega>('retirada')
   const [taxaEntrega, setTaxaEntrega] = useState('')
   const [salvando, setSalvando] = useState(false)
   const [cancelando, setCancelando] = useState(false)
+  const [excluindo, setExcluindo] = useState(false)
   const [confirmCancel, setConfirmCancel] = useState(false)
+  const [confirmExcluir, setConfirmExcluir] = useState(false)
   const [buscaAdd, setBuscaAdd] = useState('')
   const [adicionando, setAdicionando] = useState(false)
   const [expandedCats, setExpandedCats] = useState<Set<string>>(new Set())
@@ -53,8 +56,10 @@ export function EditarPedidoModal({ pedido, onClose, onSaved }: Props) {
     setCliente(pedido.cliente)
     setFormaPagamento(pedido.formapagamento)
     setStatus(pedido.status === 'Cancelado' ? 'Recebido' : pedido.status)
+    setTipoEntrega(pedido.tipoentrega)
     setTaxaEntrega(String(pedido.taxa_entrega ?? 0))
     setConfirmCancel(false)
+    setConfirmExcluir(false)
     setAdicionando(false)
     setBuscaAdd('')
     setExpandedCats(new Set())
@@ -62,7 +67,7 @@ export function EditarPedidoModal({ pedido, onClose, onSaved }: Props) {
 
   const subtotal = editItems.reduce((s, i) => s + i.preco * i.quantidade, 0)
   const taxaNum = parseFloat(taxaEntrega) || 0
-  const total = subtotal + (pedido?.tipoentrega === 'entrega' ? taxaNum : 0)
+  const total = subtotal + (tipoEntrega === 'entrega' ? taxaNum : 0)
 
   function changeQty(index: number, delta: number) {
     setEditItems(prev =>
@@ -142,8 +147,9 @@ export function EditarPedidoModal({ pedido, onClose, onSaved }: Props) {
         cliente: cliente.trim() || pedido.cliente,
         formapagamento: formaPagamento,
         status,
+        tipoentrega: tipoEntrega,
         itens: editItems,
-        taxa_entrega: pedido.tipoentrega === 'entrega' ? taxaNum : 0,
+        taxa_entrega: tipoEntrega === 'entrega' ? taxaNum : 0,
         total,
       })
       toast({ title: 'Pedido atualizado' })
@@ -151,7 +157,7 @@ export function EditarPedidoModal({ pedido, onClose, onSaved }: Props) {
         const wppStatus =
           status === 'Em preparo' ? 'preparing'
           : status === 'Finalizado'
-            ? (pedido.tipoentrega === 'entrega' ? 'out_for_delivery' : 'ready_for_pickup')
+            ? (tipoEntrega === 'entrega' ? 'out_for_delivery' : 'ready_for_pickup')
             : null
         if (wppStatus) {
           void notificarStatusPedido({
@@ -198,9 +204,25 @@ export function EditarPedidoModal({ pedido, onClose, onSaved }: Props) {
     }
   }
 
+  async function handleExcluir() {
+    if (!pedido) return
+    setExcluindo(true)
+    try {
+      await excluirPedido(pedido.id)
+      toast({ title: 'Pedido excluído' })
+      setConfirmExcluir(false)
+      onSaved()
+      onClose()
+    } catch (err) {
+      toast({ title: 'Erro ao excluir pedido', variant: 'destructive' })
+    } finally {
+      setExcluindo(false)
+    }
+  }
+
   return (
     <>
-    <Dialog open={!!pedido && !confirmCancel} onOpenChange={(open) => { if (!open && !confirmCancel) { onClose() } }}>
+    <Dialog open={!!pedido && !confirmCancel && !confirmExcluir} onOpenChange={(open) => { if (!open && !confirmCancel && !confirmExcluir) { onClose() } }}>
       <DialogContent className="max-w-lg max-h-[90dvh] flex flex-col p-0 gap-0">
         <DialogHeader className="px-6 pt-6 pb-4 border-b shrink-0">
           <DialogTitle>Editar Pedido #{pedido?.id}</DialogTitle>
@@ -215,6 +237,28 @@ export function EditarPedidoModal({ pedido, onClose, onSaved }: Props) {
               Cliente / Mesa
             </Label>
             <Input value={cliente} onChange={e => setCliente(e.target.value)} />
+          </div>
+
+          {/* Tipo de entrega */}
+          <div>
+            <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1.5 block">
+              Tipo de pedido
+            </Label>
+            <div className="grid grid-cols-3 gap-2">
+              {(['retirada', 'entrega', 'local'] as TipoEntrega[]).map(tipo => (
+                <button
+                  key={tipo}
+                  onClick={() => setTipoEntrega(tipo)}
+                  className={`py-2.5 rounded-lg border font-medium text-sm capitalize transition-colors ${
+                    tipoEntrega === tipo
+                      ? 'bg-primary text-primary-foreground border-primary'
+                      : 'hover:bg-muted'
+                  }`}
+                >
+                  {tipo.charAt(0).toUpperCase() + tipo.slice(1)}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Itens */}
@@ -337,7 +381,7 @@ export function EditarPedidoModal({ pedido, onClose, onSaved }: Props) {
           </div>
 
           {/* Taxa de entrega (somente para pedidos de entrega) */}
-          {pedido?.tipoentrega === 'entrega' && (
+          {tipoEntrega === 'entrega' && (
             <div>
               <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1.5 block">
                 Taxa de entrega (R$)
@@ -399,7 +443,7 @@ export function EditarPedidoModal({ pedido, onClose, onSaved }: Props) {
 
           {/* Total */}
           <div className="border-t pt-3 space-y-1">
-            {pedido?.tipoentrega === 'entrega' && (
+            {tipoEntrega === 'entrega' && (
               <>
                 <div className="flex justify-between items-center text-sm text-muted-foreground">
                   <span>Subtotal</span>
@@ -421,13 +465,22 @@ export function EditarPedidoModal({ pedido, onClose, onSaved }: Props) {
 
         <DialogFooter className="px-6 py-4 border-t shrink-0">
           <div className="flex items-center justify-between w-full gap-2">
-            <Button
-              variant="outline"
-              className="text-destructive border-destructive/40 hover:bg-destructive/10 hover:text-destructive"
-              onClick={() => setConfirmCancel(true)}
-            >
-              Cancelar Pedido
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                className="text-destructive border-destructive/40 hover:bg-destructive/10 hover:text-destructive"
+                onClick={() => setConfirmCancel(true)}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="outline"
+                className="text-destructive border-destructive/40 hover:bg-destructive/10 hover:text-destructive"
+                onClick={() => setConfirmExcluir(true)}
+              >
+                Excluir
+              </Button>
+            </div>
             <div className="flex gap-2">
               <Button variant="outline" onClick={onClose}>Fechar</Button>
               <Button onClick={handleSalvar} disabled={salvando || editItems.length === 0}>
@@ -456,6 +509,26 @@ export function EditarPedidoModal({ pedido, onClose, onSaved }: Props) {
           </Button>
           <Button variant="destructive" onClick={handleCancelar} disabled={cancelando}>
             {cancelando ? 'Cancelando…' : 'Sim, cancelar'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    <Dialog open={confirmExcluir} onOpenChange={(open) => { if (!open) setConfirmExcluir(false) }}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle className="text-destructive">Excluir Pedido #{pedido?.id}?</DialogTitle>
+        </DialogHeader>
+        <div className="py-1 space-y-1">
+          <p className="text-sm text-muted-foreground">O pedido será removido permanentemente do banco de dados.</p>
+          <p className="text-sm text-muted-foreground">Esta ação não pode ser desfeita.</p>
+        </div>
+        <DialogFooter className="gap-2">
+          <Button variant="outline" onClick={() => setConfirmExcluir(false)}>
+            Não, voltar
+          </Button>
+          <Button variant="destructive" onClick={handleExcluir} disabled={excluindo}>
+            {excluindo ? 'Excluindo…' : 'Sim, excluir'}
           </Button>
         </DialogFooter>
       </DialogContent>
