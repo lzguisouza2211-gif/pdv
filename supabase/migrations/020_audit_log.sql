@@ -36,7 +36,12 @@ RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER AS $$
 DECLARE
   v_acao    TEXT;
   v_detalhe JSONB;
+  v_uid     UUID;
+  v_email   TEXT;
 BEGIN
+  v_uid   := auth.uid();
+  v_email := auth.jwt() ->> 'email';
+
   IF TG_OP = 'UPDATE' THEN
     IF OLD.status IS DISTINCT FROM NEW.status THEN
       v_acao    := 'status_pedido_alterado';
@@ -63,12 +68,12 @@ BEGIN
       );
     END IF;
 
-    INSERT INTO audit_log (user_id, acao, tabela, registro_id, detalhes)
-    VALUES (auth.uid(), v_acao, 'pedidos', NEW.id::TEXT, v_detalhe);
+    INSERT INTO audit_log (user_id, user_email, acao, tabela, registro_id, detalhes)
+    VALUES (v_uid, v_email, v_acao, 'pedidos', NEW.id::TEXT, v_detalhe);
 
   ELSIF TG_OP = 'DELETE' THEN
-    INSERT INTO audit_log (user_id, acao, tabela, registro_id, detalhes)
-    VALUES (auth.uid(), 'pedido_excluido', 'pedidos', OLD.id::TEXT,
+    INSERT INTO audit_log (user_id, user_email, acao, tabela, registro_id, detalhes)
+    VALUES (v_uid, v_email, 'pedido_excluido', 'pedidos', OLD.id::TEXT,
       jsonb_build_object(
         'cliente', OLD.cliente,
         'total',   OLD.total,
@@ -92,7 +97,12 @@ RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER AS $$
 DECLARE
   v_acao    TEXT;
   v_detalhe JSONB;
+  v_uid     UUID;
+  v_email   TEXT;
 BEGIN
+  v_uid   := auth.uid();
+  v_email := auth.jwt() ->> 'email';
+
   IF TG_OP = 'UPDATE' THEN
     IF OLD.preco IS DISTINCT FROM NEW.preco THEN
       v_acao    := 'preco_alterado';
@@ -120,12 +130,12 @@ BEGIN
       v_detalhe := jsonb_build_object('produto', NEW.nome, 'categoria', NEW.categoria);
     END IF;
 
-    INSERT INTO audit_log (user_id, acao, tabela, registro_id, detalhes)
-    VALUES (auth.uid(), v_acao, 'cardapio', NEW.id::TEXT, v_detalhe);
+    INSERT INTO audit_log (user_id, user_email, acao, tabela, registro_id, detalhes)
+    VALUES (v_uid, v_email, v_acao, 'cardapio', NEW.id::TEXT, v_detalhe);
 
   ELSIF TG_OP = 'DELETE' THEN
-    INSERT INTO audit_log (user_id, acao, tabela, registro_id, detalhes)
-    VALUES (auth.uid(), 'produto_excluido', 'cardapio', OLD.id::TEXT,
+    INSERT INTO audit_log (user_id, user_email, acao, tabela, registro_id, detalhes)
+    VALUES (v_uid, v_email, 'produto_excluido', 'cardapio', OLD.id::TEXT,
       jsonb_build_object(
         'produto',   OLD.nome,
         'categoria', OLD.categoria,
