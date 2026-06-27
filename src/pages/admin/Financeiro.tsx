@@ -17,7 +17,7 @@ import { caixaEstaFechado } from '@/hooks/useCaixaAutomatico'
 import {
   TrendingUp, ShoppingBag, Receipt, QrCode, Banknote, CreditCard,
   CheckCircle2, Circle, Printer, ArrowUpRight, ArrowDownRight, Minus,
-  Clock, Star, Target, XCircle, CalendarDays,
+  Clock, Star, Target, XCircle, CalendarDays, X,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
@@ -136,6 +136,7 @@ export function Financeiro() {
   const [erro, setErro] = useState<string | null>(null)
   const [caixaFechado, setCaixaFechado] = useState<boolean | null>(null)
   const [diasDeOperacao, setDiasDeOperacao] = useState<number | null>(null)
+  const [chartModal, setChartModal] = useState<'hourly' | 'weekday' | null>(null)
 
   const hoje = format(new Date(), 'yyyy-MM-dd')
 
@@ -558,10 +559,11 @@ export function Financeiro() {
           {period !== 'hoje' && (hourlyData.length > 0 || weekdayData.length > 1) && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {hourlyData.length > 0 && (
-                <Card>
+                <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setChartModal('hourly')}>
                   <CardHeader>
                     <CardTitle className="text-base flex items-center gap-2">
                       <Clock className="h-4 w-4 text-violet-500" /> Horário de Pico
+                      <span className="ml-auto text-xs font-normal text-muted-foreground">clique para detalhes</span>
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -590,10 +592,11 @@ export function Financeiro() {
               )}
 
               {weekdayData.length > 1 && (
-                <Card>
+                <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setChartModal('weekday')}>
                   <CardHeader>
                     <CardTitle className="text-base flex items-center gap-2">
                       <Star className="h-4 w-4 text-orange-500" /> Faturamento por Dia da Semana
+                      <span className="ml-auto text-xs font-normal text-muted-foreground">clique para detalhes</span>
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -715,6 +718,141 @@ export function Financeiro() {
           )}
         </>
       )}
+
+      {/* ── Modal: Horário de Pico ─────────────────────────── */}
+      {chartModal === 'hourly' && (() => {
+        const totalHour = hourlyData.reduce((s, h) => s + h.pedidos, 0)
+        const sorted = [...hourlyData].sort((a, b) => b.pedidos - a.pedidos)
+        const peak = sorted[0]
+        const avg = totalHour / hourlyData.length
+        const horasAcima = hourlyData.filter(h => h.pedidos > avg).length
+        return (
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/40 backdrop-blur-sm" onClick={() => setChartModal(null)}>
+            <div className="bg-background rounded-t-2xl sm:rounded-2xl w-full sm:max-w-lg shadow-2xl max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
+              <div className="flex items-center justify-between px-5 py-4 border-b">
+                <div>
+                  <h3 className="font-bold text-base flex items-center gap-2"><Clock className="h-4 w-4 text-violet-500" /> Horário de Pico</h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">{periodLabel[period]} · {totalHour} pedidos em {hourlyData.length} horas</p>
+                </div>
+                <button onClick={() => setChartModal(null)} className="p-1.5 rounded-lg hover:bg-muted transition-colors"><X className="h-4 w-4" /></button>
+              </div>
+              <div className="grid grid-cols-3 gap-3 px-5 py-3 border-b bg-muted/30">
+                <div className="text-center">
+                  <p className="text-xs text-muted-foreground">Pico</p>
+                  <p className="font-bold text-violet-600">{peak.hora}</p>
+                  <p className="text-xs text-muted-foreground">{peak.pedidos} pedidos</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-xs text-muted-foreground">Média/hora</p>
+                  <p className="font-bold">{avg.toFixed(1)}</p>
+                  <p className="text-xs text-muted-foreground">pedidos</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-xs text-muted-foreground">Horas acima da média</p>
+                  <p className="font-bold text-violet-600">{horasAcima}</p>
+                  <p className="text-xs text-muted-foreground">de {hourlyData.length}h</p>
+                </div>
+              </div>
+              <div className="overflow-y-auto flex-1">
+                <table className="w-full text-sm">
+                  <thead className="sticky top-0 bg-background border-b">
+                    <tr className="text-xs text-muted-foreground uppercase tracking-wide">
+                      <th className="text-left px-5 py-2 font-medium">Horário</th>
+                      <th className="text-right px-5 py-2 font-medium">Pedidos</th>
+                      <th className="text-right px-5 py-2 font-medium">% do total</th>
+                      <th className="px-5 py-2 w-28" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sorted.map((h, i) => (
+                      <tr key={h.hora} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
+                        <td className="px-5 py-2.5 font-medium flex items-center gap-2">
+                          {i === 0 && <span className="text-xs bg-violet-100 text-violet-700 font-bold px-1.5 py-0.5 rounded">pico</span>}
+                          {h.hora}
+                        </td>
+                        <td className="px-5 py-2.5 text-right font-semibold">{h.pedidos}</td>
+                        <td className="px-5 py-2.5 text-right text-muted-foreground">{pct(h.pedidos, totalHour)}</td>
+                        <td className="px-5 py-2.5">
+                          <div className="h-1.5 w-full bg-muted rounded-full">
+                            <div className="h-full bg-violet-400 rounded-full" style={{ width: `${Math.round((h.pedidos / peak.pedidos) * 100)}%` }} />
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
+      {/* ── Modal: Faturamento por Dia da Semana ──────────── */}
+      {chartModal === 'weekday' && (() => {
+        const totalWd = weekdayData.reduce((s, d) => s + d.faturamento, 0)
+        const totalPedWd = weekdayData.reduce((s, d) => s + d.pedidos, 0)
+        const sorted = [...weekdayData].sort((a, b) => b.faturamento - a.faturamento)
+        const best = sorted[0]
+        const worst = sorted[sorted.length - 1]
+        const avgFat = totalWd / weekdayData.length
+        return (
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/40 backdrop-blur-sm" onClick={() => setChartModal(null)}>
+            <div className="bg-background rounded-t-2xl sm:rounded-2xl w-full sm:max-w-lg shadow-2xl max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
+              <div className="flex items-center justify-between px-5 py-4 border-b">
+                <div>
+                  <h3 className="font-bold text-base flex items-center gap-2"><Star className="h-4 w-4 text-orange-500" /> Faturamento por Dia da Semana</h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">{periodLabel[period]} · {totalPedWd} pedidos · {formatBRL(totalWd)}</p>
+                </div>
+                <button onClick={() => setChartModal(null)} className="p-1.5 rounded-lg hover:bg-muted transition-colors"><X className="h-4 w-4" /></button>
+              </div>
+              <div className="grid grid-cols-3 gap-3 px-5 py-3 border-b bg-muted/30">
+                <div className="text-center">
+                  <p className="text-xs text-muted-foreground">Melhor dia</p>
+                  <p className="font-bold text-orange-600">{best.diaCurto}</p>
+                  <p className="text-xs text-muted-foreground">{formatBRL(best.faturamento)}</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-xs text-muted-foreground">Média/dia</p>
+                  <p className="font-bold">{formatBRL(avgFat)}</p>
+                  <p className="text-xs text-muted-foreground">{(totalPedWd / weekdayData.length).toFixed(1)} pedidos</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-xs text-muted-foreground">Dia mais fraco</p>
+                  <p className="font-bold text-muted-foreground">{worst.diaCurto}</p>
+                  <p className="text-xs text-muted-foreground">{formatBRL(worst.faturamento)}</p>
+                </div>
+              </div>
+              <div className="overflow-y-auto flex-1">
+                <table className="w-full text-sm">
+                  <thead className="sticky top-0 bg-background border-b">
+                    <tr className="text-xs text-muted-foreground uppercase tracking-wide">
+                      <th className="text-left px-5 py-2 font-medium">Dia</th>
+                      <th className="text-right px-5 py-2 font-medium">Pedidos</th>
+                      <th className="text-right px-5 py-2 font-medium">Ticket médio</th>
+                      <th className="text-right px-5 py-2 font-medium">Faturamento</th>
+                      <th className="text-right px-5 py-2 font-medium">% total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sorted.map((d, i) => (
+                      <tr key={d.dia} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
+                        <td className="px-5 py-2.5 font-medium flex items-center gap-2">
+                          {i === 0 && <span className="text-xs bg-orange-100 text-orange-700 font-bold px-1.5 py-0.5 rounded">melhor</span>}
+                          {d.dia}
+                        </td>
+                        <td className="px-5 py-2.5 text-right text-muted-foreground">{d.pedidos}</td>
+                        <td className="px-5 py-2.5 text-right text-muted-foreground">{d.pedidos > 0 ? formatBRL(d.faturamento / d.pedidos) : '—'}</td>
+                        <td className="px-5 py-2.5 text-right font-semibold">{formatBRL(d.faturamento)}</td>
+                        <td className="px-5 py-2.5 text-right text-muted-foreground">{pct(d.faturamento, totalWd)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 }
