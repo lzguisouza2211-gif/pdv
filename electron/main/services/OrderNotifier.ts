@@ -66,6 +66,15 @@ export class OrderNotifier {
     console.log('[OrderNotifier] Inscrito em pedidos')
   }
 
+  private async fetchTempoEspera(): Promise<number> {
+    const { data } = await this.supabase
+      .from('store_status')
+      .select('tempo_espera_padrao')
+      .eq('id', 1)
+      .single()
+    return (data?.tempo_espera_padrao as number | null) ?? 30
+  }
+
   private async onNewOrder(pedido: PedidoRow): Promise<void> {
     if (!pedido.phone || !isValidBrazilPhone(pedido.phone)) return
     const items = (pedido.itens ?? []).flatMap((item) => {
@@ -83,12 +92,14 @@ export class OrderNotifier {
       return lines
     })
     try {
+      const estimatedTime = await this.fetchTempoEspera()
       await getService().notifyOrder({
         phone: pedido.phone,
         customerName: pedido.cliente.split(' ')[0],
         orderId: pedido.id,
         status: 'confirmed',
         total: pedido.total,
+        estimatedTime,
         items,
       })
     } catch (err) {
