@@ -166,7 +166,7 @@ export function AppRoutes() {
         <ProtectedRoute><AdminLayout><NovoPedido /></AdminLayout></ProtectedRoute>
       } />
 
-      <Route path="/garcom" element={<GarcomPage />} />
+      <Route path="/garcom" element={<ProtectedRoute><GarcomPage /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
