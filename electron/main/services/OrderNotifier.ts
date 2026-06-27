@@ -72,7 +72,7 @@ export class OrderNotifier {
       .select('tempo_espera_padrao')
       .eq('id', 1)
       .single()
-    return (data?.tempo_espera_padrao as number | null) ?? 30
+    return (data?.tempo_espera_padrao as number | null) ?? 80
   }
 
   private async onNewOrder(pedido: PedidoRow): Promise<void> {
