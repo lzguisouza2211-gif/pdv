@@ -5,3 +5,12 @@
 
 ---
 
+## 27/06/2026
+
+**Commit:** fix/mind no gitignore
+
+**Implementações:**
+- Adicionada entrada `mind` ao `.gitignore` com comentário `# estudos`, excluindo o diretório de anotações/estudos locais do versionamento git
+
+**Arquivos principais:**
+- `.gitignore`

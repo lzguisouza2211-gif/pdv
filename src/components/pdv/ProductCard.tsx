@@ -3,7 +3,7 @@ import { ItemCardapio } from '@/types'
 import { formatBRL } from '@/utils/calc'
 import { Minus, Plus } from 'lucide-react'
 
-const CUSTOM_CATS = new Set(['Lanches', 'Macarrão', 'Omeletes'])
+const CUSTOM_CATS = new Set(['Lanches', 'Macarrão', 'Omeletes', 'Bebidas', 'Chicletes', 'Doces'])
 
 const CATEGORY_STYLE: Record<string, { emoji: string; tint: string }> = {
   Lanches:  { emoji: '🍔', tint: '#FFE8D6' },
@@ -13,6 +13,7 @@ const CATEGORY_STYLE: Record<string, { emoji: string; tint: string }> = {
   Bebidas:  { emoji: '🥤', tint: '#DEF0FB' },
   Cervejas: { emoji: '🍺', tint: '#FEF3CC' },
   Doces:    { emoji: '🍰', tint: '#FCE3EC' },
+  Chicletes: { emoji: '🍬', tint: '#E8F5E9' },
 }
 
 interface Props {

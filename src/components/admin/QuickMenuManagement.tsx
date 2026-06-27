@@ -13,7 +13,7 @@ import { formatBRL } from '@/utils/calc'
 import { ChevronDown, Pencil, Search, X, ChevronsUpDown, Trash2 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 
-const CATS_COM_SABOR = new Set(['Bebidas'])
+const CATS_COM_SABOR = new Set(['Bebidas', 'Chicletes', 'Doces'])
 
 function SaboresPanel({ productId }: { productId: string }) {
   const [sabores, setSabores] = useState<Adicional[]>([])

@@ -14,7 +14,7 @@ import { Label } from '@/components/ui/label'
 import { Plus, Minus, Trash2, ChevronDown } from 'lucide-react'
 import { ProductCustomizationModal } from '@/components/pdv/ProductCustomizationModal'
 
-const CUSTOM_CATS = new Set(['Lanches', 'Macarrão', 'Omeletes', 'Bebidas'])
+const CUSTOM_CATS = new Set(['Lanches', 'Macarrão', 'Omeletes', 'Bebidas', 'Chicletes'])
 
 const FORMAS: { value: FormaPagamento; label: string }[] = [
   { value: 'dinheiro', label: 'Dinheiro' },

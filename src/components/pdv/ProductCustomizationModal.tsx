@@ -17,6 +17,7 @@ const CATEGORY_STYLE: Record<string, { emoji: string; tint: string }> = {
   Bebidas:  { emoji: '🥤', tint: '#DEF0FB' },
   Cervejas: { emoji: '🍺', tint: '#FEF3CC' },
   Doces:    { emoji: '🍰', tint: '#FCE3EC' },
+  Chicletes: { emoji: '🍬', tint: '#E8F5E9' },
 }
 
 interface Props {

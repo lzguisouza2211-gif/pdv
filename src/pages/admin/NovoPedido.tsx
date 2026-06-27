@@ -21,7 +21,7 @@ type CartLine = {
   obs: string
 }
 
-const CUSTOM_CATS = new Set(['Lanches', 'Macarrão', 'Omeletes'])
+const CUSTOM_CATS = new Set(['Lanches', 'Macarrão', 'Omeletes', 'Bebidas', 'Chicletes', 'Doces'])
 
 function normalize(s: string) {
   return s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim()

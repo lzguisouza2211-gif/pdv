@@ -15,8 +15,8 @@ import { gerarCartKey } from '@/utils/pedido'
 import { getClienteSession, hasSkippedPrompt } from '@/services/api/clientes.service'
 import { formatBRL } from '@/utils/calc'
 
-const CATEGORIA_ORDER = ['Lanches', 'Macarrão', 'Porções', 'Omeletes', 'Bebidas', 'Cervejas', 'Doces']
-const CUSTOM_CATS = new Set(['Lanches', 'Macarrão', 'Omeletes', 'Bebidas'])
+const CATEGORIA_ORDER = ['Lanches', 'Macarrão', 'Porções', 'Omeletes', 'Bebidas', 'Cervejas', 'Doces', 'Chicletes']
+const CUSTOM_CATS = new Set(['Lanches', 'Macarrão', 'Omeletes', 'Bebidas', 'Chicletes', 'Doces'])
 
 const COPA_ITEM_NAMES_SET = new Set(['x-bacon', 'x-tudo', 'mineirão', 'batata c/ queijo e bacon', 'pernil e cebola'])
 
@@ -28,6 +28,7 @@ const CATEGORIA_META: Record<string, { emoji: string; tint: string }> = {
   Bebidas:  { emoji: '🥤', tint: '#DEF0FB' },
   Cervejas: { emoji: '🍺', tint: '#FEF3CC' },
   Doces:    { emoji: '🍰', tint: '#FCE3EC' },
+  Chicletes: { emoji: '🍬', tint: '#E8F5E9' },
 }
 
 const NAV_HEIGHT = 56 // altura fixa da barra de abas (px)

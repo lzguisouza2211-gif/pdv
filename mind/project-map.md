@@ -110,3 +110,8 @@
 - **WhatsApp (Baileys)** — envio de notificações e confirmações
 - **Impressora térmica** — impressão via backend Node.js local
 
+---
+
+## Controle de Versão
+
+- Diretório `mind/` ignorado pelo git (anotações e estudos locais)

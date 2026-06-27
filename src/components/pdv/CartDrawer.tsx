@@ -15,7 +15,7 @@ import { PixKeyDisplay } from './PixKeyDisplay'
 import { ProductCustomizationModal } from './ProductCustomizationModal'
 import { X, Minus, Plus, Pencil, Trash2 } from 'lucide-react'
 
-const CUSTOM_CATS = new Set(['Lanches', 'Macarrão', 'Omeletes'])
+const CUSTOM_CATS = new Set(['Lanches', 'Macarrão', 'Omeletes', 'Bebidas', 'Chicletes'])
 
 export interface CheckoutSuccess {
   nome: string

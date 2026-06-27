@@ -17,7 +17,7 @@ import { caixaEstaFechado } from '@/hooks/useCaixaAutomatico'
 import {
   TrendingUp, ShoppingBag, Receipt, QrCode, Banknote, CreditCard,
   CheckCircle2, Circle, Printer, ArrowUpRight, ArrowDownRight, Minus,
-  Clock, Star, Target, XCircle, CalendarDays, X,
+  Clock, Star, Target, XCircle, CalendarDays, X, LayoutGrid, Bike, UtensilsCrossed, ShoppingCart,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
@@ -52,8 +52,34 @@ type TopProduct = {
 
 type DeltaResult = { value: number; direction: 'up' | 'down' | 'flat' }
 
+type CategoryData = {
+  categoria: string
+  quantidade: number
+  total: number
+}
+
+type EntregaData = {
+  tipo: string
+  label: string
+  pedidos: number
+  total: number
+  taxas: number
+}
+
 const WEEKDAYS_SHORT = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
 const WEEKDAYS_FULL = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']
+
+const ENTREGA_LABELS: Record<string, string> = { retirada: 'Retirada', entrega: 'Entrega', local: 'Mesa/Local' }
+const ENTREGA_COLORS: Record<string, { text: string; bar: string; border: string }> = {
+  retirada: { text: 'text-violet-600', bar: 'bg-violet-500', border: 'border-violet-200' },
+  entrega:  { text: 'text-orange-600', bar: 'bg-orange-500', border: 'border-orange-200' },
+  local:    { text: 'text-teal-600',   bar: 'bg-teal-500',   border: 'border-teal-200' },
+}
+const ENTREGA_ICONS: Record<string, React.ReactNode> = {
+  retirada: <ShoppingCart className="h-4 w-4 text-violet-600" />,
+  entrega:  <Bike className="h-4 w-4 text-orange-600" />,
+  local:    <UtensilsCrossed className="h-4 w-4 text-teal-600" />,
+}
 
 function getDateRange(period: Period): { start: string; end: string } {
   const today = new Date()
@@ -137,6 +163,10 @@ export function Financeiro() {
   const [caixaFechado, setCaixaFechado] = useState<boolean | null>(null)
   const [diasDeOperacao, setDiasDeOperacao] = useState<number | null>(null)
   const [chartModal, setChartModal] = useState<'hourly' | 'weekday' | null>(null)
+  const [categoryData, setCategoryData] = useState<CategoryData[]>([])
+  const [entregaData, setEntregaData] = useState<EntregaData[]>([])
+  const [taxaEntregaTotal, setTaxaEntregaTotal] = useState(0)
+  const [mediaItens, setMediaItens] = useState(0)
 
   const hoje = format(new Date(), 'yyyy-MM-dd')
 
@@ -225,6 +255,50 @@ export function Financeiro() {
           .sort((a, b) => b.quantidade - a.quantidade)
           .slice(0, 7)
       )
+
+      // Faturamento por categoria
+      const catMap = new Map<string, { quantidade: number; total: number }>()
+      for (const pedido of pedidos) {
+        const itens = Array.isArray(pedido.itens) ? pedido.itens : []
+        for (const item of itens) {
+          if (!item?.nome) continue
+          const cat = (item.categoria as string) ?? 'Outros'
+          const ex = catMap.get(cat) ?? { quantidade: 0, total: 0 }
+          const qty = (item.quantidade as number) ?? 1
+          const price = (item.preco as number) ?? 0
+          catMap.set(cat, { quantidade: ex.quantidade + qty, total: ex.total + price * qty })
+        }
+      }
+      setCategoryData(
+        Array.from(catMap.entries())
+          .map(([categoria, v]) => ({ categoria, ...v }))
+          .sort((a, b) => b.total - a.total)
+      )
+
+      // Breakdown por tipo de entrega
+      const entregaMap = new Map<string, { pedidos: number; total: number; taxas: number }>()
+      for (const pedido of pedidos) {
+        const tipo = pedido.tipoentrega
+        const ex = entregaMap.get(tipo) ?? { pedidos: 0, total: 0, taxas: 0 }
+        entregaMap.set(tipo, {
+          pedidos: ex.pedidos + 1,
+          total: ex.total + pedido.total,
+          taxas: ex.taxas + (pedido.taxa_entrega ?? 0),
+        })
+      }
+      setEntregaData(
+        Array.from(entregaMap.entries())
+          .map(([tipo, v]) => ({ tipo, label: ENTREGA_LABELS[tipo] ?? tipo, ...v }))
+          .sort((a, b) => b.total - a.total)
+      )
+      setTaxaEntregaTotal(pedidos.reduce((s, o) => s + (o.taxa_entrega ?? 0), 0))
+
+      // Média de itens por pedido
+      const totalQtd = pedidos.reduce((s, o) => {
+        const its = Array.isArray(o.itens) ? o.itens : []
+        return s + its.reduce((qs: number, i: { quantidade?: number }) => qs + (i.quantidade ?? 1), 0)
+      }, 0)
+      setMediaItens(pedidos.length > 0 ? totalQtd / pedidos.length : 0)
     } catch (err: unknown) {
       const e = err as Record<string, unknown>
       setErro((e?.message as string) ?? 'Erro ao carregar dados financeiros.')
@@ -308,6 +382,23 @@ export function Financeiro() {
         <td style="text-align:right;font-weight:600">${formatBRL(p.total)}</td>
       </tr>`).join('')
 
+    const catRows = categoryData.map((c) => `
+      <tr>
+        <td>${c.categoria}</td>
+        <td style="text-align:right">${c.quantidade}</td>
+        <td style="text-align:right">${pct(c.total, totalFaturamento)}</td>
+        <td style="text-align:right;font-weight:600">${formatBRL(c.total)}</td>
+      </tr>`).join('')
+
+    const entregaRows = entregaData.map((e) => `
+      <tr>
+        <td>${e.label}</td>
+        <td style="text-align:right">${e.pedidos}</td>
+        <td style="text-align:right">${pct(e.total, totalFaturamento)}</td>
+        <td style="text-align:right">${e.taxas > 0 ? formatBRL(e.taxas) : '—'}</td>
+        <td style="text-align:right;font-weight:600">${formatBRL(e.total)}</td>
+      </tr>`).join('')
+
     const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Relatório — ${periodLabel[period]}</title>
       <style>
         body{font-family:sans-serif;padding:24px;color:#111}
@@ -320,7 +411,7 @@ export function Financeiro() {
         tfoot td{border-top:2px solid #374151;font-weight:700}
       </style></head><body>
       <h2>Relatório Financeiro — ${periodLabel[period]}</h2>
-      <p>Faturamento: ${formatBRL(totalFaturamento)} &nbsp;|&nbsp; Pedidos: ${totalPedidos} &nbsp;|&nbsp; Ticket Médio: ${formatBRL(ticketMedio)}${projMonthly > totalFaturamento ? ` &nbsp;|&nbsp; Projeção mensal: ${formatBRL(projMonthly)}` : ''}</p>
+      <p>Faturamento: ${formatBRL(totalFaturamento)} &nbsp;|&nbsp; Pedidos: ${totalPedidos} &nbsp;|&nbsp; Ticket Médio: ${formatBRL(ticketMedio)} &nbsp;|&nbsp; Itens/pedido: ${mediaItens.toFixed(1)}${taxaEntregaTotal > 0 ? ` &nbsp;|&nbsp; Taxa de entrega: ${formatBRL(taxaEntregaTotal)}` : ''}${projMonthly > totalFaturamento ? ` &nbsp;|&nbsp; Projeção mensal: ${formatBRL(projMonthly)}` : ''}</p>
       <h3>Resumo Diário</h3>
       <table>
         <thead><tr><th>Data</th><th style="text-align:right">Pedidos</th><th style="text-align:right">PIX</th><th style="text-align:right">Dinheiro</th><th style="text-align:right">Cartão</th><th style="text-align:right">Total</th></tr></thead>
@@ -334,6 +425,8 @@ export function Financeiro() {
           <td style="text-align:right">${formatBRL(totalFaturamento)}</td>
         </tr></tfoot>
       </table>
+      ${catRows ? `<h3>Faturamento por Categoria</h3><table><thead><tr><th>Categoria</th><th style="text-align:right">Qtd</th><th style="text-align:right">%</th><th style="text-align:right">Total</th></tr></thead><tbody>${catRows}</tbody></table>` : ''}
+      ${entregaRows ? `<h3>Por Tipo de Entrega</h3><table><thead><tr><th>Tipo</th><th style="text-align:right">Pedidos</th><th style="text-align:right">% fat.</th><th style="text-align:right">Taxa</th><th style="text-align:right">Total</th></tr></thead><tbody>${entregaRows}</tbody></table>` : ''}
       ${topRows ? `<h3>Produtos Mais Vendidos</h3><table><thead><tr><th>#</th><th>Produto</th><th style="text-align:right">Qtd</th><th style="text-align:right">Total</th></tr></thead><tbody>${topRows}</tbody></table>` : ''}
       </body></html>`
 
@@ -418,6 +511,9 @@ export function Financeiro() {
               <CardContent className="space-y-1">
                 <p className="text-2xl font-bold">{totalPedidos}</p>
                 <DeltaBadge d={deltaPed} label={prevPeriodLabel[period]} />
+                {mediaItens > 0 && (
+                  <p className="text-xs text-muted-foreground">{mediaItens.toFixed(1)} itens/pedido</p>
+                )}
               </CardContent>
             </Card>
             <Card>
@@ -516,6 +612,62 @@ export function Financeiro() {
             </Card>
           </div>
 
+          {/* Faturamento por Categoria */}
+          {categoryData.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <LayoutGrid className="h-4 w-4 text-indigo-500" /> Faturamento por Categoria
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {categoryData.map((c) => (
+                  <div key={c.categoria} className="flex items-center gap-3">
+                    <span className="text-sm font-medium w-24 shrink-0 truncate">{c.categoria}</span>
+                    <div className="flex-1 h-2 bg-muted rounded-full min-w-0">
+                      <div
+                        className="h-full bg-indigo-500 rounded-full transition-all"
+                        style={{ width: pct(c.total, totalFaturamento) }}
+                      />
+                    </div>
+                    <span className="text-xs text-muted-foreground w-8 text-right shrink-0">{pct(c.total, totalFaturamento)}</span>
+                    <span className="text-sm font-semibold w-20 text-right shrink-0">{formatBRL(c.total)}</span>
+                    <span className="text-xs text-muted-foreground w-10 text-right shrink-0">{c.quantidade}x</span>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Breakdown por tipo de entrega */}
+          {entregaData.length > 0 && (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {entregaData.map((e) => {
+                const colors = ENTREGA_COLORS[e.tipo] ?? { text: 'text-slate-600', bar: 'bg-slate-500', border: 'border-slate-200' }
+                const icon = ENTREGA_ICONS[e.tipo] ?? null
+                return (
+                  <Card key={e.tipo} className={`${colors.border} dark:border-slate-700`}>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+                        {icon} {e.label}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className={`text-xl font-bold ${colors.text}`}>{formatBRL(e.total)}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{e.pedidos} pedidos · {pct(e.total, totalFaturamento)}</p>
+                      {e.taxas > 0 && (
+                        <p className="text-xs text-orange-600 mt-0.5">+ {formatBRL(e.taxas)} em taxas</p>
+                      )}
+                      <div className="mt-2 h-1.5 w-full bg-muted rounded-full">
+                        <div className={`h-full ${colors.bar} rounded-full transition-all`} style={{ width: pct(e.total, totalFaturamento) }} />
+                      </div>
+                    </CardContent>
+                  </Card>
+                )
+              })}
+            </div>
+          )}
+
           {/* Gráfico faturamento por dia */}
           {dailyData.length > 0 && (
             <Card>
@@ -556,7 +708,7 @@ export function Financeiro() {
           )}
 
           {/* Horário de pico + Melhor dia da semana */}
-          {period !== 'hoje' && (hourlyData.length > 0 || weekdayData.length > 1) && (
+          {(hourlyData.length > 0 || weekdayData.length > 1) && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {hourlyData.length > 0 && (
                 <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setChartModal('hourly')}>
