@@ -7,18 +7,18 @@
 ## Front-end
 
 ### Telas (Área PDV)
-- Cardápio com categorias e produtos
-- Carrinho (CartDrawer) com customização de itens
-- Modal de customização de produtos (sabores, ingredientes)
+- Cardápio com categorias e produtos (inclui categoria Chicletes com estilo 🍬)
+- Carrinho (CartDrawer) com customização de itens (Lanches, Macarrão, Omeletes, Bebidas, Chicletes)
+- Modal de customização de produtos (sabores, ingredientes) — suporta Chicletes e Doces
 - Modal de confirmação de pedido (SuccessModal)
 - Modal de telefone (PhonePromptModal)
 - Exibição de chave PIX
 
 ### Telas (Área Admin)
 - Dashboard com métricas gerais
-- Financeiro com gráficos detalhados
+- Financeiro com gráficos detalhados, faturamento por categoria, breakdown por tipo de entrega e média de itens/pedido
 - Kanban de pedidos (status em colunas)
-- Gestão do cardápio (categorias, produtos, ingredientes)
+- Gestão do cardápio (categorias, produtos, ingredientes, sabores — inclui Chicletes e Doces)
 - Gestão de clientes
 - Monitor de pedidos (OrderMonitor)
 - Novo pedido manual
@@ -79,8 +79,8 @@
 ## Funcionalidades
 
 ### Operacional
-- [x] Cardápio digital com categorias
-- [x] Pedidos com customização (sabores, remoção de ingredientes)
+- [x] Cardápio digital com categorias (Lanches, Macarrão, Omeletes, Bebidas, Cervejas, Doces, Chicletes)
+- [x] Pedidos com customização por categoria (sabores, remoção de ingredientes)
 - [x] Carrinho com cálculo de totais
 - [x] Fluxo de pagamento PIX
 - [x] Impressão térmica de pedidos
@@ -88,9 +88,14 @@
 
 ### Gestão
 - [x] Dashboard com métricas
-- [x] Painel financeiro com gráficos
+- [x] Painel financeiro com gráficos e análises detalhadas
+- [x] Faturamento por categoria com barras de progresso proporcionais
+- [x] Breakdown por tipo de entrega (retirada, entrega, mesa/local) com taxas
+- [x] Média de itens por pedido
+- [x] Relatório impresso expandido (categoria, tipo de entrega, métricas de resumo)
 - [x] CRUD de produtos e categorias
 - [x] Gestão de ingredientes e disponibilidade
+- [x] Gestão de sabores por categoria (Bebidas, Chicletes, Doces)
 - [x] Cadastro de clientes
 - [x] Log de status de pedidos
 

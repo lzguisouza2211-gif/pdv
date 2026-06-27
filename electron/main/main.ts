@@ -31,7 +31,7 @@ function createWindow(): void {
       preload: join(__dirname, '../preload/preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: false,
+      sandbox: true,
     },
     title: 'PDV Luizão Lanches',
     icon: join(__dirname, '../../public/icon.png'),

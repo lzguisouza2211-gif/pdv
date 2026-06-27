@@ -165,7 +165,6 @@ export function Financeiro() {
   const [chartModal, setChartModal] = useState<'hourly' | 'weekday' | null>(null)
   const [categoryData, setCategoryData] = useState<CategoryData[]>([])
   const [entregaData, setEntregaData] = useState<EntregaData[]>([])
-  const [taxaEntregaTotal, setTaxaEntregaTotal] = useState(0)
   const [mediaItens, setMediaItens] = useState(0)
 
   const hoje = format(new Date(), 'yyyy-MM-dd')
@@ -291,7 +290,6 @@ export function Financeiro() {
           .map(([tipo, v]) => ({ tipo, label: ENTREGA_LABELS[tipo] ?? tipo, ...v }))
           .sort((a, b) => b.total - a.total)
       )
-      setTaxaEntregaTotal(pedidos.reduce((s, o) => s + (o.taxa_entrega ?? 0), 0))
 
       // Média de itens por pedido
       const totalQtd = pedidos.reduce((s, o) => {
@@ -363,75 +361,131 @@ export function Financeiro() {
     mes: 'vs mês passado',
   }
 
-  function handlePrint() {
-    const rows = dailyData.map(d => `
-      <tr>
-        <td>${format(new Date(d.dia + 'T00:00:00'), 'EEE, dd/MM/yyyy', { locale: ptBR })}</td>
-        <td style="text-align:right">${d.pedidos}</td>
-        <td style="text-align:right">${d.pix > 0 ? formatBRL(d.pix) : '—'}</td>
-        <td style="text-align:right">${d.dinheiro > 0 ? formatBRL(d.dinheiro) : '—'}</td>
-        <td style="text-align:right">${d.cartao > 0 ? formatBRL(d.cartao) : '—'}</td>
-        <td style="text-align:right;font-weight:600">${formatBRL(d.faturamento)}</td>
-      </tr>`).join('')
+  const [printingToday, setPrintingToday] = useState(false)
 
-    const topRows = topProducts.map((p, i) => `
-      <tr>
-        <td>${i + 1}</td>
-        <td>${p.nome}</td>
-        <td style="text-align:right">${p.quantidade}</td>
-        <td style="text-align:right;font-weight:600">${formatBRL(p.total)}</td>
-      </tr>`).join('')
+  async function handlePrintToday() {
+    setPrintingToday(true)
+    try {
+      const todayStr = format(new Date(), 'yyyy-MM-dd')
+      const todayLabel = format(new Date(), "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR })
+      const pedidos = (await fetchPedidos({ startDate: todayStr, endDate: todayStr }))
+        .filter(o => o.status !== 'Cancelado')
+      const canceladosHoje = (await fetchPedidos({ startDate: todayStr, endDate: todayStr }))
+        .filter(o => o.status === 'Cancelado').length
 
-    const catRows = categoryData.map((c) => `
-      <tr>
-        <td>${c.categoria}</td>
-        <td style="text-align:right">${c.quantidade}</td>
-        <td style="text-align:right">${pct(c.total, totalFaturamento)}</td>
-        <td style="text-align:right;font-weight:600">${formatBRL(c.total)}</td>
-      </tr>`).join('')
+      let fat = 0, ped = 0, pix = 0, din = 0, car = 0, taxa = 0, qtdTotal = 0
+      const prodMap = new Map<string, { quantidade: number; total: number }>()
+      const catMapH = new Map<string, { quantidade: number; total: number }>()
+      const entMap = new Map<string, { pedidos: number; total: number; taxas: number }>()
 
-    const entregaRows = entregaData.map((e) => `
-      <tr>
-        <td>${e.label}</td>
-        <td style="text-align:right">${e.pedidos}</td>
-        <td style="text-align:right">${pct(e.total, totalFaturamento)}</td>
-        <td style="text-align:right">${e.taxas > 0 ? formatBRL(e.taxas) : '—'}</td>
-        <td style="text-align:right;font-weight:600">${formatBRL(e.total)}</td>
-      </tr>`).join('')
+      for (const o of pedidos) {
+        fat += o.total; ped++
+        if (o.formapagamento === 'pix') pix += o.total
+        else if (o.formapagamento === 'dinheiro') din += o.total
+        else if (o.formapagamento === 'cartao') car += o.total
+        taxa += o.taxa_entrega ?? 0
+        const itens = Array.isArray(o.itens) ? o.itens : []
+        for (const item of itens) {
+          if (!item?.nome) continue
+          const qty = item.quantidade ?? 1
+          const price = item.preco ?? 0
+          qtdTotal += qty
+          const ex = prodMap.get(item.nome) ?? { quantidade: 0, total: 0 }
+          prodMap.set(item.nome, { quantidade: ex.quantidade + qty, total: ex.total + price * qty })
+          const cat = (item.categoria as string) ?? 'Outros'
+          const ec = catMapH.get(cat) ?? { quantidade: 0, total: 0 }
+          catMapH.set(cat, { quantidade: ec.quantidade + qty, total: ec.total + price * qty })
+        }
+        const tipo = o.tipoentrega
+        const ee = entMap.get(tipo) ?? { pedidos: 0, total: 0, taxas: 0 }
+        entMap.set(tipo, { pedidos: ee.pedidos + 1, total: ee.total + o.total, taxas: ee.taxas + (o.taxa_entrega ?? 0) })
+      }
 
-    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Relatório — ${periodLabel[period]}</title>
-      <style>
-        body{font-family:sans-serif;padding:24px;color:#111}
-        h2{margin:0 0 4px}h3{margin:24px 0 8px;font-size:14px}
-        p{margin:0 0 16px;color:#555;font-size:13px}
-        table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:8px}
-        th,td{padding:8px 10px;border-bottom:1px solid #e5e7eb}
-        th{background:#f9fafb;font-weight:600;text-align:left}
-        th:not(:first-child){text-align:right}
-        tfoot td{border-top:2px solid #374151;font-weight:700}
-      </style></head><body>
-      <h2>Relatório Financeiro — ${periodLabel[period]}</h2>
-      <p>Faturamento: ${formatBRL(totalFaturamento)} &nbsp;|&nbsp; Pedidos: ${totalPedidos} &nbsp;|&nbsp; Ticket Médio: ${formatBRL(ticketMedio)} &nbsp;|&nbsp; Itens/pedido: ${mediaItens.toFixed(1)}${taxaEntregaTotal > 0 ? ` &nbsp;|&nbsp; Taxa de entrega: ${formatBRL(taxaEntregaTotal)}` : ''}${projMonthly > totalFaturamento ? ` &nbsp;|&nbsp; Projeção mensal: ${formatBRL(projMonthly)}` : ''}</p>
-      <h3>Resumo Diário</h3>
-      <table>
-        <thead><tr><th>Data</th><th style="text-align:right">Pedidos</th><th style="text-align:right">PIX</th><th style="text-align:right">Dinheiro</th><th style="text-align:right">Cartão</th><th style="text-align:right">Total</th></tr></thead>
-        <tbody>${rows}</tbody>
-        <tfoot><tr>
-          <td>Total</td>
-          <td style="text-align:right">${totalPedidos}</td>
-          <td style="text-align:right">${formatBRL(totalPix)}</td>
-          <td style="text-align:right">${formatBRL(totalDinheiro)}</td>
-          <td style="text-align:right">${formatBRL(totalCartao)}</td>
-          <td style="text-align:right">${formatBRL(totalFaturamento)}</td>
-        </tr></tfoot>
-      </table>
-      ${catRows ? `<h3>Faturamento por Categoria</h3><table><thead><tr><th>Categoria</th><th style="text-align:right">Qtd</th><th style="text-align:right">%</th><th style="text-align:right">Total</th></tr></thead><tbody>${catRows}</tbody></table>` : ''}
-      ${entregaRows ? `<h3>Por Tipo de Entrega</h3><table><thead><tr><th>Tipo</th><th style="text-align:right">Pedidos</th><th style="text-align:right">% fat.</th><th style="text-align:right">Taxa</th><th style="text-align:right">Total</th></tr></thead><tbody>${entregaRows}</tbody></table>` : ''}
-      ${topRows ? `<h3>Produtos Mais Vendidos</h3><table><thead><tr><th>#</th><th>Produto</th><th style="text-align:right">Qtd</th><th style="text-align:right">Total</th></tr></thead><tbody>${topRows}</tbody></table>` : ''}
-      </body></html>`
+      const ticket = ped > 0 ? fat / ped : 0
+      const mediaIt = ped > 0 ? qtdTotal / ped : 0
 
-    const w = window.open('', '_blank')
-    if (w) { w.document.write(html); w.document.close(); w.print() }
+      const topProds = Array.from(prodMap.entries())
+        .map(([nome, v]) => ({ nome, ...v }))
+        .sort((a, b) => b.quantidade - a.quantidade)
+        .slice(0, 10)
+
+      const cats = Array.from(catMapH.entries())
+        .map(([categoria, v]) => ({ categoria, ...v }))
+        .sort((a, b) => b.total - a.total)
+
+      const entregas = Array.from(entMap.entries())
+        .map(([tipo, v]) => ({ tipo, label: ENTREGA_LABELS[tipo] ?? tipo, ...v }))
+        .sort((a, b) => b.total - a.total)
+
+      const pgRows = [
+        pix > 0 ? `<tr><td>PIX</td><td style="text-align:right;color:#16a34a">${formatBRL(pix)}</td><td style="text-align:right">${pct(pix, fat)}</td></tr>` : '',
+        din > 0 ? `<tr><td>Dinheiro</td><td style="text-align:right;color:#2563eb">${formatBRL(din)}</td><td style="text-align:right">${pct(din, fat)}</td></tr>` : '',
+        car > 0 ? `<tr><td>Cartão</td><td style="text-align:right;color:#d97706">${formatBRL(car)}</td><td style="text-align:right">${pct(car, fat)}</td></tr>` : '',
+      ].join('')
+
+      const topRows = topProds.map((p, i) => `
+        <tr>
+          <td>${i + 1}</td><td>${p.nome}</td>
+          <td style="text-align:right">${p.quantidade}</td>
+          <td style="text-align:right;font-weight:600">${formatBRL(p.total)}</td>
+        </tr>`).join('')
+
+      const catRows = cats.map(c => `
+        <tr>
+          <td>${c.categoria}</td>
+          <td style="text-align:right">${c.quantidade}</td>
+          <td style="text-align:right">${pct(c.total, fat)}</td>
+          <td style="text-align:right;font-weight:600">${formatBRL(c.total)}</td>
+        </tr>`).join('')
+
+      const entRows = entregas.map(e => `
+        <tr>
+          <td>${e.label}</td>
+          <td style="text-align:right">${e.pedidos}</td>
+          <td style="text-align:right">${e.taxas > 0 ? formatBRL(e.taxas) : '—'}</td>
+          <td style="text-align:right;font-weight:600">${formatBRL(e.total)}</td>
+        </tr>`).join('')
+
+      const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+        <title>Relatório do Dia — ${todayStr}</title>
+        <style>
+          body{font-family:sans-serif;padding:24px;color:#111;font-size:14px}
+          h2{margin:0 0 2px;font-size:20px}
+          .sub{color:#555;font-size:13px;margin:0 0 20px}
+          .kpis{display:flex;gap:24px;flex-wrap:wrap;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:16px;margin-bottom:20px}
+          .kpi{text-align:center}
+          .kpi-label{font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.05em}
+          .kpi-value{font-size:22px;font-weight:700;color:#111;margin-top:2px}
+          h3{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;margin:20px 0 8px;border-bottom:1px solid #e5e7eb;padding-bottom:4px}
+          table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:4px}
+          th,td{padding:7px 10px;border-bottom:1px solid #f3f4f6}
+          th{background:#f9fafb;font-weight:600;text-align:left}
+          th:not(:first-child){text-align:right}
+          tfoot td{border-top:2px solid #374151;font-weight:700}
+          .badge{display:inline-block;padding:1px 6px;border-radius:4px;font-size:11px;font-weight:600;background:#fef3c7;color:#92400e}
+          @media print{body{padding:12px}}
+        </style></head><body>
+        <h2>Relatório do Dia</h2>
+        <p class="sub">${todayLabel}${canceladosHoje > 0 ? ` &nbsp;·&nbsp; ${canceladosHoje} pedido${canceladosHoje > 1 ? 's' : ''} cancelado${canceladosHoje > 1 ? 's' : ''}` : ''}</p>
+        <div class="kpis">
+          <div class="kpi"><div class="kpi-label">Faturamento</div><div class="kpi-value">${formatBRL(fat)}</div></div>
+          <div class="kpi"><div class="kpi-label">Pedidos</div><div class="kpi-value">${ped}</div></div>
+          <div class="kpi"><div class="kpi-label">Ticket Médio</div><div class="kpi-value">${formatBRL(ticket)}</div></div>
+          <div class="kpi"><div class="kpi-label">Itens/pedido</div><div class="kpi-value">${mediaIt.toFixed(1)}</div></div>
+          ${taxa > 0 ? `<div class="kpi"><div class="kpi-label">Taxa de entrega</div><div class="kpi-value">${formatBRL(taxa)}</div></div>` : ''}
+        </div>
+        ${pgRows ? `<h3>Formas de Pagamento</h3><table><thead><tr><th>Forma</th><th style="text-align:right">Valor</th><th style="text-align:right">%</th></tr></thead><tbody>${pgRows}</tbody><tfoot><tr><td>Total</td><td style="text-align:right">${formatBRL(fat)}</td><td style="text-align:right">100%</td></tr></tfoot></table>` : ''}
+        ${entRows ? `<h3>Por Tipo de Entrega</h3><table><thead><tr><th>Tipo</th><th style="text-align:right">Pedidos</th><th style="text-align:right">Taxa</th><th style="text-align:right">Total</th></tr></thead><tbody>${entRows}</tbody></table>` : ''}
+        ${catRows ? `<h3>Faturamento por Categoria</h3><table><thead><tr><th>Categoria</th><th style="text-align:right">Qtd</th><th style="text-align:right">%</th><th style="text-align:right">Total</th></tr></thead><tbody>${catRows}</tbody></table>` : ''}
+        ${topRows ? `<h3>Produtos Mais Vendidos</h3><table><thead><tr><th>#</th><th>Produto</th><th style="text-align:right">Qtd</th><th style="text-align:right">Total</th></tr></thead><tbody>${topRows}</tbody></table>` : ''}
+        <p style="font-size:11px;color:#9ca3af;margin-top:24px;text-align:right">Impresso em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</p>
+        </body></html>`
+
+      const w = window.open('', '_blank')
+      if (w) { w.document.write(html); w.document.close(); w.print() }
+    } finally {
+      setPrintingToday(false)
+    }
   }
 
   return (
@@ -469,9 +523,9 @@ export function Financeiro() {
               <TabsTrigger value="mes">Mês</TabsTrigger>
             </TabsList>
           </Tabs>
-          <Button variant="outline" size="sm" onClick={handlePrint} disabled={loading || dailyData.length === 0}>
+          <Button variant="outline" size="sm" onClick={handlePrintToday} disabled={printingToday}>
             <Printer className="h-4 w-4 mr-1.5" />
-            Relatório
+            {printingToday ? 'Carregando...' : 'Relatório do Dia'}
           </Button>
         </div>
       </div>

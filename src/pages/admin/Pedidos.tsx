@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Pedido, PedidoStatus } from '@/types'
 import { fetchPedidos } from '@/services/api/pedidos.service'
 import { supabase } from '@/services/supabaseClient'
@@ -14,7 +14,7 @@ import { PrintButton } from '@/components/admin/PrintButton'
 import { formatBRL } from '@/utils/calc'
 import { format, differenceInMinutes } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { Eye, Phone, Clock, AlertTriangle } from 'lucide-react'
+import { Eye, Phone, Clock, AlertTriangle, TrendingUp, ShoppingBag, Receipt, QrCode, Banknote, CreditCard, XCircle } from 'lucide-react'
 
 const STATUS_COLORS: Record<PedidoStatus, string> = {
   Recebido: 'bg-yellow-100 text-yellow-800',
@@ -91,6 +91,28 @@ export function Pedidos() {
 
   const tempoEspera = storeStatus?.tempo_espera_padrao ?? 30
 
+  const resumo = useMemo(() => {
+    const validos = pedidos.filter(p => p.status !== 'Cancelado')
+    const cancelados = pedidos.filter(p => p.status === 'Cancelado')
+    const fat = validos.reduce((s, p) => s + p.total, 0)
+    const ticket = validos.length > 0 ? fat / validos.length : 0
+    const pix = validos.filter(p => p.formapagamento === 'pix').reduce((s, p) => s + p.total, 0)
+    const din = validos.filter(p => p.formapagamento === 'dinheiro').reduce((s, p) => s + p.total, 0)
+    const car = validos.filter(p => p.formapagamento === 'cartao').reduce((s, p) => s + p.total, 0)
+    const taxa = validos.reduce((s, p) => s + (p.taxa_entrega ?? 0), 0)
+
+    const prodMap = new Map<string, number>()
+    for (const p of validos) {
+      for (const item of (Array.isArray(p.itens) ? p.itens : [])) {
+        if (!item?.nome) continue
+        prodMap.set(item.nome, (prodMap.get(item.nome) ?? 0) + (item.quantidade ?? 1))
+      }
+    }
+    const topProd = Array.from(prodMap.entries()).sort((a, b) => b[1] - a[1]).slice(0, 3)
+
+    return { fat, ticket, pix, din, car, taxa, validos: validos.length, cancelados: cancelados.length, topProd }
+  }, [pedidos])
+
   const load = useCallback(async () => {
     setLoading(true)
     try {
@@ -151,6 +173,83 @@ export function Pedidos() {
           <Clock className="h-3 w-3" />
           Tempo de espera configurado: <span className="font-semibold">{tempoEspera} min</span>
         </p>
+      )}
+
+      {/* Resumo do período */}
+      {!loading && pedidos.length > 0 && (
+        <div className="rounded-xl border bg-muted/30 p-4 space-y-3">
+          {/* KPIs principais */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="flex flex-col gap-0.5">
+              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                <TrendingUp className="h-3 w-3" /> Faturamento
+              </span>
+              <span className="text-lg font-bold text-primary">{formatBRL(resumo.fat)}</span>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                <ShoppingBag className="h-3 w-3" /> Pedidos válidos
+              </span>
+              <span className="text-lg font-bold">{resumo.validos}</span>
+              {resumo.cancelados > 0 && (
+                <span className="text-xs text-red-500 flex items-center gap-0.5">
+                  <XCircle className="h-3 w-3" /> {resumo.cancelados} cancelado{resumo.cancelados > 1 ? 's' : ''}
+                </span>
+              )}
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                <Receipt className="h-3 w-3" /> Ticket médio
+              </span>
+              <span className="text-lg font-bold">{formatBRL(resumo.ticket)}</span>
+            </div>
+            {resumo.taxa > 0 && (
+              <div className="flex flex-col gap-0.5">
+                <span className="text-xs text-muted-foreground">Taxa de entrega</span>
+                <span className="text-lg font-bold">{formatBRL(resumo.taxa)}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Breakdown pagamento */}
+          {(resumo.pix > 0 || resumo.din > 0 || resumo.car > 0) && (
+            <div className="flex flex-wrap gap-3 pt-1 border-t">
+              {resumo.pix > 0 && (
+                <span className="flex items-center gap-1.5 text-sm">
+                  <QrCode className="h-3.5 w-3.5 text-green-600" />
+                  <span className="text-muted-foreground">PIX</span>
+                  <span className="font-semibold text-green-600">{formatBRL(resumo.pix)}</span>
+                </span>
+              )}
+              {resumo.din > 0 && (
+                <span className="flex items-center gap-1.5 text-sm">
+                  <Banknote className="h-3.5 w-3.5 text-blue-600" />
+                  <span className="text-muted-foreground">Dinheiro</span>
+                  <span className="font-semibold text-blue-600">{formatBRL(resumo.din)}</span>
+                </span>
+              )}
+              {resumo.car > 0 && (
+                <span className="flex items-center gap-1.5 text-sm">
+                  <CreditCard className="h-3.5 w-3.5 text-amber-600" />
+                  <span className="text-muted-foreground">Cartão</span>
+                  <span className="font-semibold text-amber-600">{formatBRL(resumo.car)}</span>
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* Top produtos */}
+          {resumo.topProd.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2 pt-1 border-t">
+              <span className="text-xs text-muted-foreground">Mais vendidos:</span>
+              {resumo.topProd.map(([nome, qtd]) => (
+                <Badge key={nome} variant="secondary" className="text-xs font-normal">
+                  {qtd}x {nome}
+                </Badge>
+              ))}
+            </div>
+          )}
+        </div>
       )}
 
       {loading && (

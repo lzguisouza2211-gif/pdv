@@ -8,7 +8,7 @@ const service = new WhatsAppService()
 function handleError(res: Response, err: unknown, context: string): void {
   const message = err instanceof Error ? err.message : String(err)
   logger.error(`[WPP] ${context}: ${message}`)
-  res.status(500).json({ ok: false, error: message })
+  res.status(500).json({ ok: false, error: 'Erro interno do servidor' })
 }
 
 export const WhatsAppController = {

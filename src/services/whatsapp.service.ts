@@ -2,6 +2,13 @@ import type { OrderStatus } from './whatsapp.types'
 
 // Fallback HTTP para versão web (Vercel). No Electron, usa IPC direto.
 const WPP_URL = (import.meta.env.VITE_WPP_URL ?? 'http://localhost:3001').replace(/\/$/, '')
+const WPP_API_KEY = import.meta.env.VITE_WPP_API_KEY as string | undefined
+
+function wppHeaders(): HeadersInit {
+  const headers: HeadersInit = { 'Content-Type': 'application/json' }
+  if (WPP_API_KEY) headers['x-api-key'] = WPP_API_KEY
+  return headers
+}
 
 function normalizePhone(phone: string): string {
   const digits = phone.replace(/\D/g, '')
@@ -28,7 +35,7 @@ export async function enviarNotificacaoWpp(
     }
     await fetch(`${WPP_URL}/whatsapp/send`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: wppHeaders(),
       body: JSON.stringify({ phone: normalized, message }),
     })
   } catch (err) {
@@ -57,7 +64,7 @@ export async function notificarStatusPedido(params: {
     }
     await fetch(`${WPP_URL}/whatsapp/notify-order`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: wppHeaders(),
       body: JSON.stringify({ phone: normalized, ...rest }),
     })
     return { ok: true }

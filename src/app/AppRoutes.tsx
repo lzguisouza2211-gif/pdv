@@ -16,9 +16,11 @@ import { WhatsApp } from '@/pages/admin/WhatsApp'
 import { Impressora } from '@/pages/admin/Impressora'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
-import { LogOut, Users, MessageCircle, Printer } from 'lucide-react'
+import { LogOut, Users, MessageCircle, Printer, Shield } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useCaixaAutomatico } from '@/hooks/useCaixaAutomatico'
+import { registrarAuditoria } from '@/services/audit.service'
+import { AuditLog } from '@/pages/admin/AuditLog'
 
 function AdminLayout({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate()
@@ -30,6 +32,7 @@ function AdminLayout({ children }: { children: React.ReactNode }) {
   const tabValue = location.pathname.split('/')[2] ?? 'dashboard'
 
   async function handleLogout() {
+    await registrarAuditoria('logout', { email: user?.email })
     await supabase.auth.signOut()
     setUser(null)
     navigate('/login')
@@ -49,7 +52,7 @@ function AdminLayout({ children }: { children: React.ReactNode }) {
             value={tabValue}
             onValueChange={(v) => navigate(`/admin/${v === 'dashboard' ? '' : v}`)}
           >
-            <TabsList className="admin-nav-tabs w-full grid grid-cols-9 mb-2">
+            <TabsList className="admin-nav-tabs w-full grid grid-cols-10 mb-2">
               <TabsTrigger value="dashboard" className="text-xs sm:text-sm">Dashboard</TabsTrigger>
               <TabsTrigger value="cardapio" className="text-xs sm:text-sm">Cardápio</TabsTrigger>
               <TabsTrigger value="pedidos" className="text-xs sm:text-sm">Pedidos</TabsTrigger>
@@ -67,6 +70,10 @@ function AdminLayout({ children }: { children: React.ReactNode }) {
               <TabsTrigger value="impressora" className="text-xs sm:text-sm flex items-center gap-1">
                 <Printer className="h-3.5 w-3.5" />
                 Impressora
+              </TabsTrigger>
+              <TabsTrigger value="auditoria" className="text-xs sm:text-sm flex items-center gap-1">
+                <Shield className="h-3.5 w-3.5" />
+                Auditoria
               </TabsTrigger>
             </TabsList>
           </Tabs>
@@ -101,6 +108,9 @@ export function AppRoutes() {
       // Ignora SIGNED_OUT causado por falha de rede (troca de WiFi, queda momentânea)
       if (event === 'SIGNED_OUT' && !navigator.onLine) return
       setUser(session?.user ?? null)
+      if (event === 'SIGNED_IN' && session?.user) {
+        registrarAuditoria('login', { email: session.user.email })
+      }
     })
 
     // Quando a internet voltar, tenta restaurar a sessão que pode ter sido perdida
@@ -147,6 +157,9 @@ export function AppRoutes() {
       } />
       <Route path="/admin/impressora" element={
         <ProtectedRoute><AdminLayout><Impressora /></AdminLayout></ProtectedRoute>
+      } />
+      <Route path="/admin/auditoria" element={
+        <ProtectedRoute><AdminLayout><AuditLog /></AdminLayout></ProtectedRoute>
       } />
 
       <Route path="/admin/pedido" element={
