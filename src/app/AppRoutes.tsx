@@ -16,20 +16,40 @@ import { WhatsApp } from '@/pages/admin/WhatsApp'
 import { Impressora } from '@/pages/admin/Impressora'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
-import { LogOut, Users, MessageCircle, Printer, Shield } from 'lucide-react'
+import { LogOut, Users, MessageCircle, Printer, Menu } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useCaixaAutomatico } from '@/hooks/useCaixaAutomatico'
 import { registrarAuditoria } from '@/services/audit.service'
 import { AuditLog } from '@/pages/admin/AuditLog'
+import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
+import { cn } from '@/lib/utils'
+
+const NAV_ITEMS = [
+  { value: 'dashboard',  label: 'Dashboard'   },
+  { value: 'cardapio',   label: 'Cardápio'    },
+  { value: 'pedidos',    label: 'Pedidos'     },
+  { value: 'historico',  label: 'Histórico'   },
+  { value: 'pedido',     label: 'Novo Pedido' },
+  { value: 'financeiro', label: 'Financeiro'  },
+  { value: 'clientes',   label: 'Clientes',   icon: Users         },
+  { value: 'whatsapp',   label: 'WhatsApp',   icon: MessageCircle },
+  { value: 'impressora', label: 'Impressora', icon: Printer       },
+]
 
 function AdminLayout({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate()
   const location = useLocation()
   const { user, setUser } = useUser()
+  const [menuOpen, setMenuOpen] = useState(false)
 
   useCaixaAutomatico(user?.id)
 
   const tabValue = location.pathname.split('/')[2] ?? 'dashboard'
+
+  function navTo(v: string) {
+    navigate(`/admin/${v === 'dashboard' ? '' : v}`)
+    setMenuOpen(false)
+  }
 
   async function handleLogout() {
     await registrarAuditoria('logout', { email: user?.email })
@@ -43,7 +63,18 @@ function AdminLayout({ children }: { children: React.ReactNode }) {
       <header className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/85">
         <div className="max-w-6xl mx-auto px-4">
           <div className="flex items-center justify-between py-2 gap-2">
-            <span className="font-bold text-primary shrink-0">Luizão Admin</span>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="ghost"
+                className="md:hidden"
+                aria-label="Abrir menu"
+                onClick={() => setMenuOpen(true)}
+              >
+                <Menu className="h-4 w-4" />
+              </Button>
+              <span className="font-bold text-primary shrink-0">Luizão Admin</span>
+            </div>
             <Button size="sm" variant="ghost" onClick={handleLogout}>
               <LogOut className="h-4 w-4" />
             </Button>
@@ -52,7 +83,7 @@ function AdminLayout({ children }: { children: React.ReactNode }) {
             value={tabValue}
             onValueChange={(v) => navigate(`/admin/${v === 'dashboard' ? '' : v}`)}
           >
-            <TabsList className="admin-nav-tabs w-full grid grid-cols-10 mb-2">
+            <TabsList className="admin-nav-tabs w-full hidden md:grid grid-cols-9 mb-2">
               <TabsTrigger value="dashboard" className="text-xs sm:text-sm">Dashboard</TabsTrigger>
               <TabsTrigger value="cardapio" className="text-xs sm:text-sm">Cardápio</TabsTrigger>
               <TabsTrigger value="pedidos" className="text-xs sm:text-sm">Pedidos</TabsTrigger>
@@ -71,10 +102,6 @@ function AdminLayout({ children }: { children: React.ReactNode }) {
                 <Printer className="h-3.5 w-3.5" />
                 Impressora
               </TabsTrigger>
-              <TabsTrigger value="auditoria" className="text-xs sm:text-sm flex items-center gap-1">
-                <Shield className="h-3.5 w-3.5" />
-                Auditoria
-              </TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
@@ -84,6 +111,33 @@ function AdminLayout({ children }: { children: React.ReactNode }) {
           {children}
         </div>
       </main>
+
+      <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
+        <SheetContent>
+          <SheetTitle className="px-4 pt-5 pb-3 text-primary">
+            Luizão Admin
+          </SheetTitle>
+          <nav className="flex flex-col gap-1 px-2">
+            {NAV_ITEMS.map(({ value, label, icon: Icon }) => (
+              <button
+                key={value}
+                onClick={() => navTo(value)}
+                className={cn(
+                  'flex items-center gap-3 w-full px-3 py-2.5 text-sm text-left rounded-md transition-colors',
+                  tabValue === value
+                    ? 'bg-primary text-primary-foreground font-medium'
+                    : 'hover:bg-muted text-foreground'
+                )}
+              >
+                {Icon
+                  ? <Icon className="h-4 w-4 shrink-0" />
+                  : <span className="h-4 w-4 shrink-0" aria-hidden="true" />}
+                {label}
+              </button>
+            ))}
+          </nav>
+        </SheetContent>
+      </Sheet>
     </div>
   )
 }

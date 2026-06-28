@@ -249,7 +249,7 @@ export function EditarPedidoModal({ pedido, onClose, onSaved }: Props) {
                 <button
                   key={tipo}
                   onClick={() => setTipoEntrega(tipo)}
-                  className={`py-2.5 rounded-lg border font-medium text-sm capitalize transition-colors ${
+                  className={`py-2.5 rounded-lg border font-medium text-sm capitalize leading-tight transition-colors ${
                     tipoEntrega === tipo
                       ? 'bg-primary text-primary-foreground border-primary'
                       : 'hover:bg-muted'
@@ -407,7 +407,7 @@ export function EditarPedidoModal({ pedido, onClose, onSaved }: Props) {
                 <button
                   key={f.value}
                   onClick={() => setFormaPagamento(f.value)}
-                  className={`py-2.5 rounded-lg border font-medium text-sm transition-colors ${
+                  className={`py-2.5 rounded-lg border font-medium text-sm leading-tight transition-colors ${
                     formaPagamento === f.value
                       ? 'bg-primary text-primary-foreground border-primary'
                       : 'hover:bg-muted'
@@ -429,7 +429,7 @@ export function EditarPedidoModal({ pedido, onClose, onSaved }: Props) {
                 <button
                   key={s}
                   onClick={() => setStatus(s)}
-                  className={`py-2 rounded-lg border text-xs font-medium transition-colors ${
+                  className={`py-2 rounded-lg border text-xs font-medium leading-tight transition-colors ${
                     status === s
                       ? 'bg-primary text-primary-foreground border-primary'
                       : 'hover:bg-muted'

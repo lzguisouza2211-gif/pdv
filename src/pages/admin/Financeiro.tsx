@@ -944,19 +944,19 @@ export function Financeiro() {
               </div>
               <div className="grid grid-cols-3 gap-3 px-5 py-3 border-b bg-muted/30">
                 <div className="text-center">
-                  <p className="text-xs text-muted-foreground">Pico</p>
+                  <p className="text-xs text-muted-foreground leading-tight">Pico</p>
                   <p className="font-bold text-violet-600">{peak.hora}</p>
-                  <p className="text-xs text-muted-foreground">{peak.pedidos} pedidos</p>
+                  <p className="text-xs text-muted-foreground leading-tight">{peak.pedidos} pedidos</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-xs text-muted-foreground">Média/hora</p>
+                  <p className="text-xs text-muted-foreground leading-tight">Média/hora</p>
                   <p className="font-bold">{avg.toFixed(1)}</p>
-                  <p className="text-xs text-muted-foreground">pedidos</p>
+                  <p className="text-xs text-muted-foreground leading-tight">pedidos</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-xs text-muted-foreground">Horas acima da média</p>
+                  <p className="text-xs text-muted-foreground leading-tight">Horas acima da média</p>
                   <p className="font-bold text-violet-600">{horasAcima}</p>
-                  <p className="text-xs text-muted-foreground">de {hourlyData.length}h</p>
+                  <p className="text-xs text-muted-foreground leading-tight">de {hourlyData.length}h</p>
                 </div>
               </div>
               <div className="overflow-y-auto flex-1">
@@ -1013,19 +1013,19 @@ export function Financeiro() {
               </div>
               <div className="grid grid-cols-3 gap-3 px-5 py-3 border-b bg-muted/30">
                 <div className="text-center">
-                  <p className="text-xs text-muted-foreground">Melhor dia</p>
+                  <p className="text-xs text-muted-foreground leading-tight">Melhor dia</p>
                   <p className="font-bold text-orange-600">{best.diaCurto}</p>
-                  <p className="text-xs text-muted-foreground">{formatBRL(best.faturamento)}</p>
+                  <p className="text-xs text-muted-foreground leading-tight whitespace-nowrap">{formatBRL(best.faturamento)}</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-xs text-muted-foreground">Média/dia</p>
-                  <p className="font-bold">{formatBRL(avgFat)}</p>
-                  <p className="text-xs text-muted-foreground">{(totalPedWd / weekdayData.length).toFixed(1)} pedidos</p>
+                  <p className="text-xs text-muted-foreground leading-tight">Média/dia</p>
+                  <p className="font-bold whitespace-nowrap">{formatBRL(avgFat)}</p>
+                  <p className="text-xs text-muted-foreground leading-tight">{(totalPedWd / weekdayData.length).toFixed(1)} pedidos</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-xs text-muted-foreground">Dia mais fraco</p>
+                  <p className="text-xs text-muted-foreground leading-tight">Dia mais fraco</p>
                   <p className="font-bold text-muted-foreground">{worst.diaCurto}</p>
-                  <p className="text-xs text-muted-foreground">{formatBRL(worst.faturamento)}</p>
+                  <p className="text-xs text-muted-foreground leading-tight whitespace-nowrap">{formatBRL(worst.faturamento)}</p>
                 </div>
               </div>
               <div className="overflow-y-auto flex-1">

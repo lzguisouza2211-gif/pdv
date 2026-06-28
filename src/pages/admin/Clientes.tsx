@@ -65,7 +65,7 @@ function ClienteCard({ c }: { c: Cliente }) {
           <div className="flex items-center gap-1 text-xs text-muted-foreground mb-0.5">
             <span className="text-xs">R$</span> Total gasto
           </div>
-          <p className="text-sm font-bold text-primary">{formatBRL(c.total_gasto)}</p>
+          <p className="text-sm font-bold text-primary whitespace-nowrap">{formatBRL(c.total_gasto)}</p>
         </div>
       </div>
 

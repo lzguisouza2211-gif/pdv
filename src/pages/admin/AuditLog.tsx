@@ -100,41 +100,65 @@ export function AuditLog() {
           ) : filtered.length === 0 ? (
             <div className="p-10 text-center text-muted-foreground text-sm">Nenhum registro encontrado.</div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b bg-muted/40 text-muted-foreground">
-                    <th className="text-left px-4 py-2 font-medium whitespace-nowrap">Data/hora</th>
-                    <th className="text-left px-4 py-2 font-medium">Ação</th>
-                    <th className="text-left px-4 py-2 font-medium">Usuário</th>
-                    <th className="text-left px-4 py-2 font-medium">Detalhes</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.map(entry => {
-                    const meta = ACAO_META[entry.acao]
-                    return (
-                      <tr key={entry.id} className="border-b last:border-0 hover:bg-muted/20">
-                        <td className="px-4 py-2 text-muted-foreground whitespace-nowrap">
+            <>
+              {/* desktop */}
+              <div className="overflow-x-auto hidden md:block">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b bg-muted/40 text-muted-foreground">
+                      <th className="text-left px-4 py-2 font-medium whitespace-nowrap">Data/hora</th>
+                      <th className="text-left px-4 py-2 font-medium">Ação</th>
+                      <th className="text-left px-4 py-2 font-medium">Usuário</th>
+                      <th className="text-left px-4 py-2 font-medium">Detalhes</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filtered.map(entry => {
+                      const meta = ACAO_META[entry.acao]
+                      return (
+                        <tr key={entry.id} className="border-b last:border-0 hover:bg-muted/20">
+                          <td className="px-4 py-2 text-muted-foreground whitespace-nowrap">
+                            {format(new Date(entry.created_at), "dd/MM/yy HH:mm", { locale: ptBR })}
+                          </td>
+                          <td className="px-4 py-2">
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${meta?.color ?? 'bg-gray-100 text-gray-700'}`}>
+                              {meta?.label ?? entry.acao}
+                            </span>
+                          </td>
+                          <td className="px-4 py-2 text-muted-foreground">
+                            {entry.user_email ?? '—'}
+                          </td>
+                          <td className="px-4 py-2 text-muted-foreground">
+                            {humanize(entry.detalhes)}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* mobile */}
+              <div className="md:hidden space-y-2 p-3">
+                {filtered.map(entry => {
+                  const meta = ACAO_META[entry.acao]
+                  return (
+                    <div key={entry.id} className="border rounded-lg p-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${meta?.color ?? 'bg-gray-100 text-gray-700'}`}>
+                          {meta?.label ?? entry.acao}
+                        </span>
+                        <span className="text-xs text-muted-foreground whitespace-nowrap">
                           {format(new Date(entry.created_at), "dd/MM/yy HH:mm", { locale: ptBR })}
-                        </td>
-                        <td className="px-4 py-2">
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${meta?.color ?? 'bg-gray-100 text-gray-700'}`}>
-                            {meta?.label ?? entry.acao}
-                          </span>
-                        </td>
-                        <td className="px-4 py-2 text-muted-foreground">
-                          {entry.user_email ?? '—'}
-                        </td>
-                        <td className="px-4 py-2 text-muted-foreground">
-                          {humanize(entry.detalhes)}
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
+                        </span>
+                      </div>
+                      <p className="text-sm mt-1.5">{entry.user_email ?? '—'}</p>
+                      <p className="text-sm text-muted-foreground mt-1 break-words">{humanize(entry.detalhes)}</p>
+                    </div>
+                  )
+                })}
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
