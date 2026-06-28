@@ -7,7 +7,6 @@ import { formatBRL } from '@/utils/calc'
 import { ChevronDown, Plus, Minus, X } from 'lucide-react'
 import { fetchAdicionaisByProduct, fetchRetiradosByProduct } from '@/services/api/cardapio.service'
 
-const MAX_QTY = 5
 
 const CATEGORY_STYLE: Record<string, { emoji: string; tint: string }> = {
   Lanches:  { emoji: '🍔', tint: '#FFE8D6' },
@@ -20,6 +19,8 @@ const CATEGORY_STYLE: Record<string, { emoji: string; tint: string }> = {
   Chicletes: { emoji: '🍬', tint: '#E8F5E9' },
 }
 
+const MAX_QTY = 5
+
 interface Props {
   item: ItemCardapio | null
   open: boolean
@@ -30,6 +31,7 @@ interface Props {
   initialObservacoes?: string
   initialQty?: number
   confirmLabel?: string
+  allowMultipleAdicionais?: boolean
 }
 
 interface DropdownSectionProps {
@@ -72,6 +74,7 @@ function DropdownSection({ title, badgeCount, isOpen, onToggle, children }: Drop
 export function ProductCustomizationModal({
   item, open, onClose, onConfirm,
   initialAddQtys, initialSelectedRem, initialObservacoes, initialQty, confirmLabel,
+  allowMultipleAdicionais = false,
 }: Props) {
   const [adicionais, setAdicionais] = useState<Adicional[]>([])
   const [retiradas, setRetiradas] = useState<string[]>([])
@@ -118,7 +121,7 @@ export function ProductCustomizationModal({
   }, [item, open])
 
   function setQty(nome: string, value: number) {
-    setAddQtys((prev) => ({ ...prev, [nome]: Math.max(0, Math.min(MAX_QTY, value)) }))
+    setAddQtys((prev) => ({ ...prev, [nome]: value }))
   }
 
   function toggleRem(nome: string) {
@@ -137,7 +140,7 @@ export function ProductCustomizationModal({
       ...(selectedSabor ? [{ nome: selectedSabor, preco: 0, tipo: 'add' as const, qty: 1 }] : []),
       ...paidAdicionais
         .filter((a) => (addQtys[a.nome] ?? 0) > 0)
-        .map((a) => ({ nome: a.nome, preco: a.preco, tipo: 'add' as const, qty: addQtys[a.nome] })),
+        .map((a) => ({ nome: a.nome, preco: a.preco, tipo: 'add' as const, qty: allowMultipleAdicionais ? (addQtys[a.nome] ?? 1) : 1 })),
       ...[...selectedRem].map((nome) => ({ nome, preco: 0, tipo: 'remove' as const })),
     ]
     onConfirm(extras, observacoes.trim(), qty)
@@ -248,14 +251,14 @@ export function ProductCustomizationModal({
                 >
                   {paidAdicionais.map((a) => {
                     const q = addQtys[a.nome] ?? 0
-                    const subtotal = a.preco * q
-                    return (
+                    const selected = q > 0
+                    return allowMultipleAdicionais ? (
                       <div key={a.id} className="flex items-center justify-between gap-2">
                         <div className="flex-1 min-w-0">
                           <p className="text-sm capitalize leading-tight font-medium">{a.nome}</p>
                           <p className="text-xs text-primary font-semibold">
-                            +{formatBRL(a.preco)} <span className="text-muted-foreground font-normal">por unidade</span>
-                            {q > 1 && <span className="text-muted-foreground font-normal"> · {formatBRL(subtotal)} total</span>}
+                            +{formatBRL(a.preco)}
+                            {q > 1 && <span className="text-muted-foreground font-normal"> · {formatBRL(a.preco * q)} total</span>}
                           </p>
                         </div>
                         <div className="flex items-center gap-1.5 shrink-0">
@@ -277,6 +280,21 @@ export function ProductCustomizationModal({
                             <Plus className="h-3 w-3 text-primary" />
                           </button>
                         </div>
+                      </div>
+                    ) : (
+                      <div key={a.id} className="flex items-center gap-2">
+                        <Checkbox
+                          id={`add-${a.nome}`}
+                          checked={selected}
+                          onCheckedChange={() => setQty(a.nome, selected ? 0 : 1)}
+                        />
+                        <Label
+                          htmlFor={`add-${a.nome}`}
+                          className="flex-1 flex items-center justify-between capitalize cursor-pointer text-sm font-medium"
+                        >
+                          <span>{a.nome}</span>
+                          <span className="text-primary font-semibold">+{formatBRL(a.preco)}</span>
+                        </Label>
                       </div>
                     )
                   })}

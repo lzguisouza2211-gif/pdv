@@ -543,6 +543,7 @@ export function EditarPedidoModal({ pedido, onClose, onSaved }: Props) {
         setPendingAddItem(null)
       }}
       confirmLabel="Adicionar ao pedido"
+      allowMultipleAdicionais
     />
     </>
   )
