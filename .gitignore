@@ -19,3 +19,6 @@ credentials.ts
 
 # estudos
 mind
+
+#Danger
+reset_database.sql
