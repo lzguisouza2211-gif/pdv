@@ -254,8 +254,8 @@ export function ProductCustomizationModal({
                         <div className="flex-1 min-w-0">
                           <p className="text-sm capitalize leading-tight font-medium">{a.nome}</p>
                           <p className="text-xs text-primary font-semibold">
-                            +{formatBRL(a.preco)}
-                            {q > 1 && <span className="text-muted-foreground font-normal"> · {formatBRL(subtotal)}</span>}
+                            +{formatBRL(a.preco)} <span className="text-muted-foreground font-normal">por unidade</span>
+                            {q > 1 && <span className="text-muted-foreground font-normal"> · {formatBRL(subtotal)} total</span>}
                           </p>
                         </div>
                         <div className="flex items-center gap-1.5 shrink-0">

@@ -183,7 +183,7 @@ export function OrderMonitor({ pedidos, onUpdate }: Props) {
               </div>
               {item.adicionais && item.adicionais.length > 0 && (
                 <p className="text-[10px] text-green-700 pl-2">
-                  + {item.adicionais.map(a => (a.qty ?? 1) > 1 ? `${a.qty}x ${a.nome}` : a.nome).join(', ')}
+                  + {item.adicionais.map(a => (a.qty ?? 1) > 1 ? `${a.qty}x ${a.nome} (p/ unidade)` : a.nome).join(', ')}
                 </p>
               )}
               {item.retirados && item.retirados.length > 0 && (

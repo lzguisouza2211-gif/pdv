@@ -101,7 +101,7 @@ export function buildProductionReceipt(pedido: Pedido): string {
 
   lines.push(SEP)
   if (pedido.taxa_entrega > 0) {
-    lines.push(pad('SUBTOTAL:', fmtR$(total - pedido.taxa_entrega)))
+    lines.push(pad('SUBTOTAL:', fmtR$(total)))
     lines.push(pad('TAXA ENTREGA:', fmtR$(pedido.taxa_entrega)))
     lines.push(SEP)
   }
