@@ -108,3 +108,29 @@ export type IngredienteIndisponivel = {
   pg: boolean
   valid_on: string
 }
+
+export type OrigemGasto = 'pessoal' | 'lanche'
+
+export interface CategoriaGasto {
+  id: number
+  origem: OrigemGasto
+  nome: string
+  ordem: number
+  ativo: boolean
+  created_at: string
+}
+
+export interface Gasto {
+  id: number
+  valor: number
+  data: string            // 'YYYY-MM-DD'
+  origem: OrigemGasto
+  categoria_id: number
+  forma_pagamento: FormaPagamento
+  fornecedor?: string
+  descricao?: string
+  user_id?: string
+  created_at: string
+  updated_at: string
+  categoria?: { nome: string } | null
+}

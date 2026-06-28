@@ -11,12 +11,13 @@ import { Pedidos } from '@/pages/admin/Pedidos'
 import { KanbanPedidos } from '@/pages/admin/KanbanPedidos'
 import { NovoPedido } from '@/pages/admin/NovoPedido'
 import { Financeiro } from '@/pages/admin/Financeiro'
+import { Gastos } from '@/pages/admin/Gastos'
 import { Clientes } from '@/pages/admin/Clientes'
 import { WhatsApp } from '@/pages/admin/WhatsApp'
 import { Impressora } from '@/pages/admin/Impressora'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
-import { LogOut, Users, MessageCircle, Printer, Menu } from 'lucide-react'
+import { LogOut, Users, MessageCircle, Printer, Menu, DollarSign } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useCaixaAutomatico } from '@/hooks/useCaixaAutomatico'
 import { registrarAuditoria } from '@/services/audit.service'
@@ -31,6 +32,7 @@ const NAV_ITEMS = [
   { value: 'historico',  label: 'Histórico'   },
   { value: 'pedido',     label: 'Novo Pedido' },
   { value: 'financeiro', label: 'Financeiro'  },
+  { value: 'gastos',     label: 'Gastos',     icon: DollarSign    },
   { value: 'clientes',   label: 'Clientes',   icon: Users         },
   { value: 'whatsapp',   label: 'WhatsApp',   icon: MessageCircle },
   { value: 'impressora', label: 'Impressora', icon: Printer       },
@@ -83,13 +85,14 @@ function AdminLayout({ children }: { children: React.ReactNode }) {
             value={tabValue}
             onValueChange={(v) => navigate(`/admin/${v === 'dashboard' ? '' : v}`)}
           >
-            <TabsList className="admin-nav-tabs w-full hidden md:grid grid-cols-9 mb-2">
+            <TabsList className="admin-nav-tabs w-full hidden md:grid grid-cols-10 mb-2">
               <TabsTrigger value="dashboard" className="text-xs sm:text-sm">Dashboard</TabsTrigger>
               <TabsTrigger value="cardapio" className="text-xs sm:text-sm">Cardápio</TabsTrigger>
               <TabsTrigger value="pedidos" className="text-xs sm:text-sm">Pedidos</TabsTrigger>
               <TabsTrigger value="historico" className="text-xs sm:text-sm">Histórico</TabsTrigger>
               <TabsTrigger value="pedido" className="text-xs sm:text-sm">Novo Pedido</TabsTrigger>
               <TabsTrigger value="financeiro" className="text-xs sm:text-sm">Financeiro</TabsTrigger>
+              <TabsTrigger value="gastos" className="text-xs sm:text-sm">Gastos</TabsTrigger>
               <TabsTrigger value="clientes" className="text-xs sm:text-sm flex items-center gap-1">
                 <Users className="h-3.5 w-3.5" />
                 Clientes
@@ -202,6 +205,9 @@ export function AppRoutes() {
       } />
       <Route path="/admin/financeiro" element={
         <ProtectedRoute><AdminLayout><Financeiro /></AdminLayout></ProtectedRoute>
+      } />
+      <Route path="/admin/gastos" element={
+        <ProtectedRoute><AdminLayout><Gastos /></AdminLayout></ProtectedRoute>
       } />
       <Route path="/admin/clientes" element={
         <ProtectedRoute><AdminLayout><Clientes /></AdminLayout></ProtectedRoute>
