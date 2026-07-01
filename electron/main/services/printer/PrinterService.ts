@@ -86,7 +86,7 @@ Write-Host "OK: $w bytes enviados"`
       try { unlinkSync(tmpBin) } catch {}
       try { unlinkSync(tmpPs)  } catch {}
       if (err) {
-        const msg = (err as NodeJS.ErrnoException).killed
+        const msg = err.killed
           ? 'Impressora não respondeu em 30 segundos (timeout)'
           : stderr || err.message
         console.error('[PRINT] Erro PowerShell:', msg)
