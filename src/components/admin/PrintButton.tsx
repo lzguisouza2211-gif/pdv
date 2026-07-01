@@ -3,6 +3,7 @@ import { Pedido } from '@/types'
 import { Button } from '@/components/ui/button'
 import { Printer } from 'lucide-react'
 import { printJob } from '@/services/printer/printQueue'
+import { useToast } from '@/hooks/use-toast'
 
 interface Props {
   pedido: Pedido
@@ -10,13 +11,20 @@ interface Props {
 
 export function PrintButton({ pedido }: Props) {
   const [printing, setPrinting] = useState(false)
+  const { toast } = useToast()
 
   async function handlePrint() {
     if (printing) return
     setPrinting(true)
     try {
       await printJob(pedido, 'ambos')
+      toast({ title: '✅ Impresso', description: `Nota do pedido #${pedido.id} enviada para impressora` })
     } catch (err) {
+      toast({
+        title: '❌ Erro ao imprimir',
+        description: err instanceof Error ? err.message : 'Verifique se a impressora está ligada e online',
+        variant: 'destructive',
+      })
     } finally {
       setPrinting(false)
     }

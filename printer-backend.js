@@ -62,11 +62,13 @@ async function printViaWindows(text) {
   const cut   = Buffer.from([0x1D, 0x56, 0x00])
   writeFileSync(tmpBin, Buffer.concat([init, Buffer.from(text, 'latin1'), feeds, cut]))
 
-  // PowerShell usa \ literal em strings — sem escaping
   const pName = (PRINTER_NAME || 'Printer POS-80').replace(/"/g, '`"')
+  // DLL cacheado em disco — compilado apenas na 1ª impressão, carregado rapidamente nas demais
+  const dllPath = join(tmpdir(), 'PDVRawPrint.dll').replace(/\\/g, '\\\\')
 
-  // Raw print via Win32 WritePrinter — bypassa o GDI do Windows
-  const psScript = `Add-Type -TypeDefinition @'
+  const psScript = `
+$dll = "${dllPath}"
+$src = @'
 using System;
 using System.Runtime.InteropServices;
 public class RawPrint {
@@ -85,6 +87,7 @@ public class RawPrint {
     [DllImport("winspool.Drv")] public static extern bool WritePrinter(IntPtr h, IntPtr p, int c, out int w);
 }
 '@
+if (Test-Path $dll) { Add-Type -Path $dll } else { Add-Type -TypeDefinition $src -OutputAssembly $dll }
 $h = [IntPtr]::Zero
 if (-not [RawPrint]::OpenPrinter("${pName}", [ref]$h, [IntPtr]::Zero)) {
     throw "OpenPrinter falhou - verifique o nome da impressora: '${pName}'"
@@ -109,12 +112,15 @@ Write-Host "OK: $w bytes enviados"`
   writeFileSync(tmpPs, psScript, 'utf8')
 
   return new Promise((resolve, reject) => {
-    exec(`powershell -ExecutionPolicy Bypass -File "${tmpPs}"`, (err, stdout, stderr) => {
+    exec(`powershell -ExecutionPolicy Bypass -File "${tmpPs}"`, { timeout: 30_000 }, (err, stdout, stderr) => {
       try { unlinkSync(tmpBin) } catch {}
       try { unlinkSync(tmpPs)  } catch {}
       if (err) {
-        console.error('[PRINT] Erro PowerShell:', stderr || err.message)
-        reject(new Error(stderr || err.message))
+        const msg = err.killed
+          ? 'Impressora não respondeu em 30 segundos (timeout)'
+          : stderr || err.message
+        console.error('[PRINT] Erro PowerShell:', msg)
+        reject(new Error(msg))
       } else {
         console.log('[PRINT]', stdout.trim())
         resolve()

@@ -50,6 +50,10 @@ export function NovoPedido({ defaultCliente, lockTipoEntrega, onSuccess }: NovoP
   const [cart, setCart] = useState<CartLine[]>([])
   const [cliente, setCliente] = useState(defaultCliente ?? '')
   const [tipoEntrega, setTipoEntrega] = useState<TipoEntrega>(lockTipoEntrega ?? 'local')
+  const [phone, setPhone] = useState('')
+  const [endereco, setEndereco] = useState('')
+  const [numero, setNumero] = useState('')
+  const [bairro, setBairro] = useState('')
   const [enviando, setEnviando] = useState(false)
   const [busca, setBusca] = useState('')
   const [cartOpen, setCartOpen] = useState(false)
@@ -118,6 +122,11 @@ export function NovoPedido({ defaultCliente, lockTipoEntrega, onSuccess }: NovoP
   async function handleCriarPedido() {
     if (cart.length === 0) return
 
+    if (tipoEntrega === 'entrega' && (!endereco.trim() || !numero.trim() || !bairro.trim())) {
+      toast({ title: 'Preencha o endereço completo', variant: 'destructive' })
+      return
+    }
+
     const itensPayload: PedidoItem[] = cart.map(l => {
       const adicionais = l.extras.filter(e => e.tipo === 'add')
       const retirados = l.extras.filter(e => e.tipo === 'remove')
@@ -136,8 +145,12 @@ export function NovoPedido({ defaultCliente, lockTipoEntrega, onSuccess }: NovoP
     setEnviando(true)
     try {
       await criarPedido({
-        cliente: cliente.trim() || 'Mesa',
+        cliente: cliente.trim() || (tipoEntrega === 'entrega' ? 'Cliente' : 'Mesa'),
+        phone: tipoEntrega === 'entrega' && phone.trim() ? phone.trim() : undefined,
         tipoentrega: tipoEntrega,
+        endereco: tipoEntrega === 'entrega' ? endereco.trim() : undefined,
+        numero: tipoEntrega === 'entrega' ? numero.trim() : undefined,
+        bairro: tipoEntrega === 'entrega' ? bairro.trim() : undefined,
         itens: itensPayload,
         formapagamento: 'dinheiro',
         taxa_entrega: 0,
@@ -147,6 +160,10 @@ export function NovoPedido({ defaultCliente, lockTipoEntrega, onSuccess }: NovoP
       toast({ title: 'Pedido criado!', description: `${formatBRL(total)} · ${totalItens} item(s)` })
       setCart([])
       setCliente(defaultCliente ?? '')
+      setPhone('')
+      setEndereco('')
+      setNumero('')
+      setBairro('')
       setCartOpen(false)
       onSuccess?.()
     } catch (err) {
@@ -233,14 +250,61 @@ export function NovoPedido({ defaultCliente, lockTipoEntrega, onSuccess }: NovoP
       <div className="space-y-3 border-t pt-3">
         <div>
           <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1.5 block">
-            Cliente / Mesa
+            {tipoEntrega === 'entrega' ? 'Cliente' : 'Cliente / Mesa'}
           </Label>
           <Input
-            placeholder="Ex: Mesa 4, João..."
+            placeholder={tipoEntrega === 'entrega' ? 'Nome do cliente' : 'Ex: Mesa 4, João...'}
             value={cliente}
             onChange={e => setCliente(e.target.value)}
           />
         </div>
+
+        {tipoEntrega === 'entrega' && (
+          <>
+            <div>
+              <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1.5 block">
+                Telefone
+              </Label>
+              <Input
+                placeholder="(11) 99999-9999"
+                value={phone}
+                onChange={e => setPhone(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1.5 block">
+                Rua <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                placeholder="Nome da rua"
+                value={endereco}
+                onChange={e => setEndereco(e.target.value)}
+              />
+            </div>
+            <div className="grid grid-cols-5 gap-2">
+              <div className="col-span-2">
+                <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1.5 block">
+                  Número <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  placeholder="Nº"
+                  value={numero}
+                  onChange={e => setNumero(e.target.value)}
+                />
+              </div>
+              <div className="col-span-3">
+                <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1.5 block">
+                  Bairro <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  placeholder="Bairro"
+                  value={bairro}
+                  onChange={e => setBairro(e.target.value)}
+                />
+              </div>
+            </div>
+          </>
+        )}
 
         {!lockTipoEntrega && (
           <div>

@@ -29,6 +29,7 @@ function buildMesas(config: MesaConfig): string[] {
 
 export function GarcomPage() {
   const [mesa, setMesa] = useState<string | null>(null)
+  const [modoEntrega, setModoEntrega] = useState(false)
   const location = useLocation()
   const navigate = useNavigate()
   const isAdmin = location.pathname.startsWith('/admin')
@@ -82,11 +83,13 @@ export function GarcomPage() {
 
   function handleBack() {
     setMesa(null)
+    setModoEntrega(false)
     fetchOcupadas()
   }
 
   function handleSuccess() {
     setMesa(null)
+    setModoEntrega(false)
     fetchOcupadas()
   }
 
@@ -96,7 +99,8 @@ export function GarcomPage() {
     setShowSettings(false)
   }
 
-  if (mesa) {
+  if (mesa || modoEntrega) {
+    const titulo = modoEntrega ? '🛵 Entrega' : mesa!
     return (
       <div className="min-h-screen bg-background flex flex-col">
         <header className="bg-primary text-primary-foreground px-4 pt-safe pb-3 sticky top-0 z-30">
@@ -108,14 +112,18 @@ export function GarcomPage() {
               <ChevronLeft className="h-5 w-5" />
             </button>
             <div className="flex-1 text-center">
-              <p className="font-bold text-lg leading-tight">{mesa}</p>
+              <p className="font-bold text-lg leading-tight">{titulo}</p>
               <p className="text-primary-foreground/70 text-xs">Luizão Lanches</p>
             </div>
             <div className="w-8" />
           </div>
         </header>
         <main className="flex-1 overflow-y-auto">
-          <NovoPedido defaultCliente={mesa} lockTipoEntrega="local" onSuccess={handleSuccess} />
+          <NovoPedido
+            defaultCliente={modoEntrega ? '' : mesa!}
+            lockTipoEntrega={modoEntrega ? 'entrega' : 'local'}
+            onSuccess={handleSuccess}
+          />
         </main>
       </div>
     )
@@ -174,6 +182,16 @@ export function GarcomPage() {
               </button>
             )
           })}
+        </div>
+
+        <div className="max-w-sm mx-auto mt-4">
+          <button
+            onClick={() => setModoEntrega(true)}
+            className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl border-2 border-blue-400 bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 font-semibold text-base transition-all shadow-sm active:scale-95 hover:border-blue-500 hover:bg-blue-100 dark:hover:bg-blue-900/40"
+          >
+            <span className="text-2xl">🛵</span>
+            Pedido de Entrega
+          </button>
         </div>
       </main>
 

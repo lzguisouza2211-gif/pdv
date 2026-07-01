@@ -19,6 +19,7 @@ credentials.ts
 
 # estudos
 mind
+script/auto-doc.mjs
 
 #Danger
 reset_database.sql
