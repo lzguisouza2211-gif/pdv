@@ -63,7 +63,7 @@ function DropdownSection({ title, badgeCount, isOpen, onToggle, children }: Drop
         />
       </button>
       {isOpen && (
-        <div className="px-4 py-3 space-y-3 border-t bg-background">
+        <div className="px-5 py-1 divide-y divide-border border-t bg-background">
           {children}
         </div>
       )}
@@ -253,44 +253,45 @@ export function ProductCustomizationModal({
                     const q = addQtys[a.nome] ?? 0
                     const selected = q > 0
                     return allowMultipleAdicionais ? (
-                      <div key={a.id} className="flex items-center justify-between gap-2">
+                      <div key={a.id} className="flex items-center justify-between gap-3 py-3.5">
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm capitalize leading-tight font-medium">{a.nome}</p>
-                          <p className="text-xs text-primary font-semibold">
+                          <p className="text-[15px] capitalize leading-tight font-medium">{a.nome}</p>
+                          <p className="text-sm text-primary font-semibold mt-0.5">
                             +{formatBRL(a.preco)}
                             {q > 1 && <span className="text-muted-foreground font-normal"> · {formatBRL(a.preco * q)} total</span>}
                           </p>
                         </div>
-                        <div className="flex items-center gap-1.5 shrink-0">
+                        <div className="flex items-center gap-2 shrink-0">
                           <button
                             type="button"
                             onClick={() => setQty(a.nome, q - 1)}
                             disabled={q === 0}
-                            className="h-8 w-8 rounded-full border-2 flex items-center justify-center disabled:opacity-30 hover:bg-muted transition-colors"
+                            className="h-9 w-9 rounded-full border-2 flex items-center justify-center disabled:opacity-30 hover:bg-muted transition-colors"
                           >
-                            <Minus className="h-3 w-3" />
+                            <Minus className="h-3.5 w-3.5" />
                           </button>
-                          <span className="w-5 text-center text-sm font-bold tabular-nums">{q}</span>
+                          <span className="w-6 text-center text-base font-bold tabular-nums">{q}</span>
                           <button
                             type="button"
                             onClick={() => setQty(a.nome, q + 1)}
                             disabled={q >= MAX_QTY}
-                            className="h-8 w-8 rounded-full border-2 border-primary flex items-center justify-center disabled:opacity-30 hover:bg-primary/10 transition-colors"
+                            className="h-9 w-9 rounded-full border-2 border-primary flex items-center justify-center disabled:opacity-30 hover:bg-primary/10 transition-colors"
                           >
-                            <Plus className="h-3 w-3 text-primary" />
+                            <Plus className="h-3.5 w-3.5 text-primary" />
                           </button>
                         </div>
                       </div>
                     ) : (
-                      <div key={a.id} className="flex items-center gap-2">
+                      <div key={a.id} className="flex items-center gap-3 py-3.5">
                         <Checkbox
                           id={`add-${a.nome}`}
                           checked={selected}
                           onCheckedChange={() => setQty(a.nome, selected ? 0 : 1)}
+                          className="h-5 w-5"
                         />
                         <Label
                           htmlFor={`add-${a.nome}`}
-                          className="flex-1 flex items-center justify-between capitalize cursor-pointer text-sm font-medium"
+                          className="flex-1 flex items-center justify-between capitalize cursor-pointer text-[15px] font-medium"
                         >
                           <span>{a.nome}</span>
                           <span className="text-primary font-semibold">+{formatBRL(a.preco)}</span>
@@ -309,13 +310,14 @@ export function ProductCustomizationModal({
                   onToggle={() => setRemOpen((v) => !v)}
                 >
                   {retiradas.map((nome) => (
-                    <div key={nome} className="flex items-center gap-2">
+                    <div key={nome} className="flex items-center gap-3 py-3.5">
                       <Checkbox
                         id={`rem-${nome}`}
                         checked={selectedRem.has(nome)}
                         onCheckedChange={() => toggleRem(nome)}
+                        className="h-5 w-5"
                       />
-                      <Label htmlFor={`rem-${nome}`} className="capitalize cursor-pointer text-sm font-medium">
+                      <Label htmlFor={`rem-${nome}`} className="capitalize cursor-pointer text-[15px] font-medium">
                         sem {nome}
                       </Label>
                     </div>

@@ -1,6 +1,38 @@
 import { supabase } from '@/services/supabaseClient'
 import { Pedido, PedidoStatus } from '@/types'
 
+export type ItemVendasCount = { nome: string; categoria?: string; quantidade: number }
+
+// Ranking de itens mais vendidos nos últimos `days` dias.
+// Lê apenas a coluna `itens` (sem nome/telefone/endereço do cliente).
+export async function fetchItensMaisVendidos(days = 30, limit = 5): Promise<ItemVendasCount[]> {
+  const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString()
+
+  const { data, error } = await supabase
+    .from('pedidos')
+    .select('itens')
+    .gte('created_at', cutoff)
+    .neq('status', 'Cancelado')
+
+  if (error) throw error
+
+  const counts = new Map<string, { categoria?: string; quantidade: number }>()
+  for (const row of (data ?? []) as { itens: unknown }[]) {
+    const itens = Array.isArray(row.itens) ? row.itens : []
+    for (const item of itens as { nome?: string; categoria?: string; quantidade?: number }[]) {
+      if (!item?.nome) continue
+      const ex = counts.get(item.nome) ?? { categoria: item.categoria, quantidade: 0 }
+      ex.quantidade += item.quantidade ?? 1
+      counts.set(item.nome, ex)
+    }
+  }
+
+  return Array.from(counts.entries())
+    .map(([nome, v]) => ({ nome, categoria: v.categoria, quantidade: v.quantidade }))
+    .sort((a, b) => b.quantidade - a.quantidade)
+    .slice(0, limit)
+}
+
 async function registrarStatusLog(pedidoId: string, status: PedidoStatus): Promise<void> {
   await supabase.from('pedido_status_log').insert({ pedido_id: pedidoId, status })
 }

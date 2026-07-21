@@ -15,7 +15,10 @@ export function CategorySection({ itens, onAdd, onRemove, storeOpen, cartQtys = 
   if (itens.length === 0) return null
 
   return (
-    <div>
+    <div
+      className="no-scrollbar"
+      style={{ display: 'flex', gap: 14, overflowX: 'auto', padding: '10px 2px 6px' }}
+    >
       {itens.map((item) => (
         <ProductCard
           key={item.id}

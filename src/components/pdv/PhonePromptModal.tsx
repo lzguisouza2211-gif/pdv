@@ -57,19 +57,6 @@ export function PhonePromptModal({ open, onDone }: Props) {
           position: 'relative',
           overflow: 'hidden',
         }}>
-          {/* Emojis fundo */}
-          <div style={{
-            position: 'absolute', inset: 0, opacity: 0.07,
-            display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', placeItems: 'center',
-            transform: 'rotate(-6deg) scale(1.3)',
-          }}>
-            {Array.from({ length: 12 }, (_, i) => (
-              <span key={i} style={{ fontSize: 22 }}>
-                {['⚽', '🏆', '🍔', '🍟'][i % 4]}
-              </span>
-            ))}
-          </div>
-
           <div style={{
             position: 'relative', zIndex: 1,
             width: 64, height: 64, borderRadius: 999,
