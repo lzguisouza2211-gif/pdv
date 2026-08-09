@@ -101,6 +101,14 @@ export type Adicional = {
   ordem: number
 }
 
+export type DeliveryFeeOption = {
+  id: string
+  bairro: string
+  taxa: number
+  ativo: boolean
+  ordem: number
+}
+
 export type IngredienteIndisponivel = {
   id: string
   ingrediente: string

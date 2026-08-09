@@ -3,7 +3,7 @@ import React from 'react'
 import { ItemCardapio, ExtraOption } from '@/types'
 import { useCardapio } from '@/hooks/useCardapio'
 import { useStoreStatus } from '@/hooks/useStoreStatus'
-import { useDeliveryFee } from '@/hooks/useDeliveryFee'
+import { useDeliveryFee, useDeliveryFees } from '@/hooks/useDeliveryFee'
 import { useTopVendidos } from '@/hooks/useTopVendidos'
 import { useCart, calcItemPrice } from '@/store/useCart'
 import { CategorySection } from '@/components/pdv/CategorySection'
@@ -36,6 +36,7 @@ export function Cardapio() {
   const { itens, loading, error } = useCardapio()
   const { status } = useStoreStatus()
   const { fee } = useDeliveryFee()
+  const { bairros } = useDeliveryFees()
   const { topNomes } = useTopVendidos()
   const { items: cartItems, add, remove } = useCart()
   const [customItem, setCustomItem] = useState<ItemCardapio | null>(null)
@@ -239,7 +240,7 @@ export function Cardapio() {
           {!storeOpen ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#DC2626', fontSize: 13.5, fontWeight: 600 }}>
               <AlertTriangle size={14} />
-              Fechado — pedidos temporariamente suspensos
+              Fechado
             </div>
           ) : (
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
@@ -544,6 +545,7 @@ export function Cardapio() {
         onClose={() => setDrawerOpen(false)}
         onSuccess={(result) => { setSuccessData(result); setShowSuccess(true) }}
         deliveryFee={fee}
+        deliveryFees={bairros}
       />
 
       <SuccessModal

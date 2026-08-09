@@ -8,10 +8,14 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { updateStoreOpen, updateTempoEspera, fetchPixConfig, updatePixConfig } from '@/services/api/storeStatus.service'
-import { fetchDeliveryFee, updateDeliveryFee } from '@/services/api/deliveryFee.service'
+import {
+  fetchDeliveryFee, updateDeliveryFee,
+  fetchDeliveryFees, upsertDeliveryFeeOption, deleteDeliveryFeeOption,
+} from '@/services/api/deliveryFee.service'
+import { DeliveryFeeOption } from '@/types'
 import { formatBRL } from '@/utils/calc'
 import { toast } from '@/hooks/use-toast'
-import { ShoppingBag, DollarSign, TrendingUp, Clock, QrCode, Truck } from 'lucide-react'
+import { ShoppingBag, DollarSign, TrendingUp, Clock, QrCode, Truck, X } from 'lucide-react'
 
 type PixKeyType = 'cpf' | 'cnpj' | 'celular' | 'email' | 'aleatoria'
 
@@ -96,6 +100,11 @@ export function Dashboard() {
   const [taxaEdit, setTaxaEdit] = useState('')
   const [savingTaxa, setSavingTaxa] = useState(false)
 
+  const [bairrosFee, setBairrosFee] = useState<DeliveryFeeOption[]>([])
+  const [novoBairroNome, setNovoBairroNome] = useState('')
+  const [novoBairroTaxa, setNovoBairroTaxa] = useState('')
+  const [savingBairro, setSavingBairro] = useState(false)
+
   const pedidosDoDia = pedidos.filter((p) => p.status !== 'Cancelado')
   const faturamento = pedidosDoDia.reduce((s, p) => s + p.total, 0)
   const ticketMedio = pedidosDoDia.length > 0 ? faturamento / pedidosDoDia.length : 0
@@ -110,6 +119,7 @@ export function Dashboard() {
       }
     })
     fetchDeliveryFee().then(setTaxaEntrega).catch(() => {})
+    fetchDeliveryFees().then(setBairrosFee).catch(() => {})
   }, [])
 
   async function handleToggleStore(checked: boolean) {
@@ -153,6 +163,36 @@ export function Dashboard() {
       toast({ title: 'Erro ao salvar taxa', description: e?.message, variant: 'destructive' })
     } finally {
       setSavingTaxa(false)
+    }
+  }
+
+  async function handleAddBairro() {
+    const nome = novoBairroNome.trim()
+    const val = parseFloat(novoBairroTaxa.replace(',', '.'))
+    if (!nome || isNaN(val) || val < 0) return
+    setSavingBairro(true)
+    try {
+      await upsertDeliveryFeeOption({ bairro: nome, taxa: val, ativo: true, ordem: bairrosFee.length + 1 })
+      const updated = await fetchDeliveryFees()
+      setBairrosFee(updated)
+      setNovoBairroNome('')
+      setNovoBairroTaxa('')
+      toast({ title: 'Bairro adicionado!' })
+    } catch (err: unknown) {
+      const e = err as { message?: string }
+      toast({ title: 'Erro ao adicionar bairro', description: e?.message, variant: 'destructive' })
+    } finally {
+      setSavingBairro(false)
+    }
+  }
+
+  async function handleDeleteBairro(id: string) {
+    try {
+      await deleteDeliveryFeeOption(id)
+      setBairrosFee((prev) => prev.filter((b) => b.id !== id))
+    } catch (err: unknown) {
+      const e = err as { message?: string }
+      toast({ title: 'Erro ao remover bairro', description: e?.message, variant: 'destructive' })
     }
   }
 
@@ -262,12 +302,13 @@ export function Dashboard() {
         <Card>
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
-              <Truck className="h-4 w-4" /> Taxa de entrega
+              <Truck className="h-4 w-4" /> Taxa de entrega padrão
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
             <p className="text-xs text-muted-foreground">
-              Atual: <span className="font-semibold text-foreground">{formatBRL(taxaEntrega)}</span>
+              Usada para bairros fora da lista abaixo. Atual:{' '}
+              <span className="font-semibold text-foreground">{formatBRL(taxaEntrega)}</span>
             </p>
             <div className="flex gap-2">
               <Input
@@ -278,6 +319,56 @@ export function Dashboard() {
               />
               <Button onClick={handleSaveTaxa} disabled={savingTaxa || !taxaEdit}>
                 Salvar
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Truck className="h-4 w-4" /> Taxas por bairro
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="space-y-1.5">
+              {bairrosFee.length === 0 && (
+                <p className="text-xs text-muted-foreground italic">Nenhum bairro cadastrado</p>
+              )}
+              {bairrosFee.map((b) => (
+                <div key={b.id} className="flex items-center justify-between gap-2 text-sm border rounded-lg px-3 py-1.5">
+                  <span className="capitalize">{b.bairro}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold">{formatBRL(b.taxa)}</span>
+                    <button
+                      onClick={() => handleDeleteBairro(b.id)}
+                      className="text-muted-foreground hover:text-destructive transition-colors"
+                      aria-label={`Remover ${b.bairro}`}
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <Input
+                placeholder="Bairro"
+                value={novoBairroNome}
+                onChange={(e) => setNovoBairroNome(e.target.value)}
+                className="flex-1 min-w-0"
+              />
+              <Input
+                placeholder="Ex: 7.50"
+                value={novoBairroTaxa}
+                onChange={(e) => setNovoBairroTaxa(e.target.value)}
+                className="w-24 min-w-0"
+              />
+              <Button
+                onClick={handleAddBairro}
+                disabled={savingBairro || !novoBairroNome.trim() || !novoBairroTaxa}
+              >
+                +
               </Button>
             </div>
           </CardContent>

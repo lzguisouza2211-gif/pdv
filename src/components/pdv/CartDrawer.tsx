@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useCart, useCartSubtotal } from '@/store/useCart'
-import { TipoEntrega, FormaPagamento, CartItem, ExtraOption, ItemCardapio, Cliente } from '@/types'
+import { TipoEntrega, FormaPagamento, CartItem, ExtraOption, ItemCardapio, Cliente, DeliveryFeeOption } from '@/types'
 import { normalizePedidoPayload, gerarCartKey } from '@/utils/pedido'
 import { validarTelefoneBrasileiro, formatarTelefone } from '@/utils/validation'
 import { formatBRL, calcTotal, calcTroco, calcItemPrice } from '@/utils/calc'
@@ -11,6 +11,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { PixKeyDisplay } from './PixKeyDisplay'
 import { ProductCustomizationModal } from './ProductCustomizationModal'
 import { X, Minus, Plus, Pencil, Trash2 } from 'lucide-react'
@@ -34,6 +35,7 @@ interface Props {
   onClose: () => void
   onSuccess: (result: CheckoutSuccess) => void
   deliveryFee: number
+  deliveryFees: DeliveryFeeOption[]
 }
 
 const TIPO_LABEL: Record<TipoEntrega, string> = {
@@ -48,7 +50,7 @@ const PG_LABEL: Record<FormaPagamento, string> = {
   pix: 'Pix',
 }
 
-export function CartDrawer({ open, onClose, onSuccess, deliveryFee }: Props) {
+export function CartDrawer({ open, onClose, onSuccess, deliveryFee, deliveryFees }: Props) {
   const { items, remove, removeAll, updateQty, add, clear } = useCart()
   const [editingItem, setEditingItem] = useState<CartItem | null>(null)
   const subtotal = useCartSubtotal()
@@ -121,7 +123,8 @@ export function CartDrawer({ open, onClose, onSuccess, deliveryFee }: Props) {
     }
   }
 
-  const taxa = tipoentrega === 'entrega' ? deliveryFee : 0
+  const bairroFee = deliveryFees.find((b) => b.bairro === bairro)?.taxa
+  const taxa = tipoentrega === 'entrega' ? (bairroFee ?? deliveryFee) : 0
   const total = calcTotal(subtotal, taxa)
   const troco =
     formapagamento === 'dinheiro' && valorPago
@@ -454,13 +457,18 @@ export function CartDrawer({ open, onClose, onSuccess, deliveryFee }: Props) {
                   </div>
                   <div>
                     <Label htmlFor="bairro" className="text-sm font-semibold">Bairro *</Label>
-                    <Input
-                      id="bairro"
-                      value={bairro}
-                      onChange={(e) => setBairro(e.target.value)}
-                      placeholder="Bairro"
-                      className={`mt-1 rounded-xl ${errors.bairro ? 'border-destructive' : ''}`}
-                    />
+                    <Select value={bairro} onValueChange={setBairro}>
+                      <SelectTrigger id="bairro" className={`mt-1 rounded-xl ${errors.bairro ? 'border-destructive' : ''}`}>
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {deliveryFees.map((b) => (
+                          <SelectItem key={b.id} value={b.bairro}>
+                            {b.bairro}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
               </div>

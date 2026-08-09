@@ -9,7 +9,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { formatBRL } from '@/utils/calc'
 import {
-  format, startOfMonth, subDays, subMonths, getDaysInMonth, getDate, getHours, getDay,
+  format, startOfMonth, subDays, subMonths, getDaysInMonth, getDate,
   differenceInDays,
 } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -101,10 +101,34 @@ function getPrevDateRange(period: Period): { start: string; end: string } {
       end: format(subDays(today, 7), 'yyyy-MM-dd'),
     }
   }
+  // Compara com o mesmo número de dias decorridos no mês anterior,
+  // não o mês anterior inteiro (senão o mês corrente, ainda incompleto,
+  // sempre pareceria muito pior do que realmente está).
   const last = subMonths(today, 1)
+  const currentDay = Math.min(getDate(today), getDaysInMonth(last))
   return {
     start: format(startOfMonth(last), 'yyyy-MM-dd'),
-    end: format(new Date(last.getFullYear(), last.getMonth() + 1, 0), 'yyyy-MM-dd'),
+    end: format(new Date(last.getFullYear(), last.getMonth(), currentDay), 'yyyy-MM-dd'),
+  }
+}
+
+// Converte um timestamp UTC (created_at) para data/hora/dia-da-semana
+// no fuso de Brasília — consistente com o filtro de período em
+// pedidos.service.ts, que já busca por dia usando offset -03:00.
+function brtParts(iso: string): { dateStr: string; hour: number; weekday: number } {
+  const d = new Date(iso)
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Sao_Paulo',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', hour12: false, weekday: 'short',
+    }).formatToParts(d).map((p) => [p.type, p.value])
+  )
+  const weekdayMap: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 }
+  return {
+    dateStr: `${parts.year}-${parts.month}-${parts.day}`,
+    hour: parseInt(parts.hour, 10) % 24,
+    weekday: weekdayMap[parts.weekday] ?? 0,
   }
 }
 
@@ -194,7 +218,7 @@ export function Financeiro() {
       // Daily aggregation
       const map = new Map<string, DailyData>()
       for (const pedido of pedidos) {
-        const dia = pedido.created_at.split('T')[0]
+        const dia = brtParts(pedido.created_at).dateStr
         if (!map.has(dia)) {
           map.set(dia, { dia, faturamento: 0, pedidos: 0, pix: 0, dinheiro: 0, cartao: 0 })
         }
@@ -210,7 +234,7 @@ export function Financeiro() {
       // Hourly distribution
       const hourMap = new Map<number, number>()
       for (const pedido of pedidos) {
-        const h = getHours(new Date(pedido.created_at))
+        const h = brtParts(pedido.created_at).hour
         hourMap.set(h, (hourMap.get(h) ?? 0) + 1)
       }
       setHourlyData(
@@ -223,7 +247,7 @@ export function Financeiro() {
       // Weekday distribution
       const wdMap = new Map<number, { faturamento: number; pedidos: number }>()
       for (const pedido of pedidos) {
-        const wd = getDay(new Date(pedido.created_at))
+        const wd = brtParts(pedido.created_at).weekday
         const existing = wdMap.get(wd) ?? { faturamento: 0, pedidos: 0 }
         wdMap.set(wd, { faturamento: existing.faturamento + pedido.total, pedidos: existing.pedidos + 1 })
       }
