@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { formatBRL } from '@/utils/calc'
 import { ChevronDown, Plus, Minus, X } from 'lucide-react'
 import { fetchAdicionaisByProduct, fetchRetiradosByProduct } from '@/services/api/cardapio.service'
+import { CATEGORIAS_COM_SABOR } from '@/config/cardapio'
 
 
 const CATEGORY_STYLE: Record<string, { emoji: string; tint: string }> = {
@@ -132,8 +133,9 @@ export function ProductCustomizationModal({
     })
   }
 
-  const sabores = adicionais.filter((a) => a.preco === 0)
-  const paidAdicionais = adicionais.filter((a) => a.preco > 0)
+  const temSabor = item ? CATEGORIAS_COM_SABOR.has(item.categoria) : false
+  const sabores = temSabor ? adicionais.filter((a) => a.preco === 0) : []
+  const paidAdicionais = temSabor ? adicionais.filter((a) => a.preco > 0) : adicionais
 
   function handleConfirm() {
     const extras: ExtraOption[] = [
@@ -257,8 +259,8 @@ export function ProductCustomizationModal({
                         <div className="flex-1 min-w-0">
                           <p className="text-[15px] capitalize leading-tight font-medium">{a.nome}</p>
                           <p className="text-sm text-primary font-semibold mt-0.5">
-                            +{formatBRL(a.preco)}
-                            {q > 1 && <span className="text-muted-foreground font-normal"> · {formatBRL(a.preco * q)} total</span>}
+                            {a.preco > 0 ? `+${formatBRL(a.preco)}` : 'Grátis'}
+                            {q > 1 && a.preco > 0 && <span className="text-muted-foreground font-normal"> · {formatBRL(a.preco * q)} total</span>}
                           </p>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
@@ -294,7 +296,7 @@ export function ProductCustomizationModal({
                           className="flex-1 flex items-center justify-between capitalize cursor-pointer text-[15px] font-medium"
                         >
                           <span>{a.nome}</span>
-                          <span className="text-primary font-semibold">+{formatBRL(a.preco)}</span>
+                          <span className="text-primary font-semibold">{a.preco > 0 ? `+${formatBRL(a.preco)}` : 'Grátis'}</span>
                         </Label>
                       </div>
                     )

@@ -12,8 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { formatBRL } from '@/utils/calc'
 import { ChevronDown, Pencil, Search, X, ChevronsUpDown, Trash2 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
-
-const CATS_COM_SABOR = new Set(['Bebidas', 'Chicletes', 'Doces'])
+import { CATEGORIAS_COM_SABOR } from '@/config/cardapio'
 
 function SaboresPanel({ productId }: { productId: string }) {
   const [sabores, setSabores] = useState<Adicional[]>([])
@@ -383,7 +382,7 @@ export function QuickMenuManagement({ reloadSignal = 0 }: Props) {
                           </div>
                         )}
 
-                        {CATS_COM_SABOR.has(item.categoria) && editingItem[item.id] === undefined && (
+                        {CATEGORIAS_COM_SABOR.has(item.categoria) && editingItem[item.id] === undefined && (
                           <SaboresPanel productId={item.id} />
                         )}
                       </div>
