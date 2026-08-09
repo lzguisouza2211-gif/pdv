@@ -1,12 +1,21 @@
 import 'dotenv/config'
 import app from './app.js'
 import { getClient } from './services/whatsapp/WhatsAppService.js'
+import { ConversationManager } from './services/conversation/ConversationManager.js'
 import { logger } from './utils/logger.js'
+import type { InboundMessage } from './services/whatsapp/types.js'
 
 const PORT = Number(process.env.WPP_PORT ?? 3001)
 
 async function bootstrap(): Promise<void> {
   const client = getClient()
+  const conversationManager = new ConversationManager()
+
+  client.on('message', (msg: InboundMessage) => {
+    conversationManager.handleInbound(msg).catch((err) => {
+      logger.error(`[CONV] Erro ao processar mensagem recebida: ${err.message}`)
+    })
+  })
 
   // ─── Eventos do cliente WhatsApp ─────────────────────────────────────────
 
@@ -50,6 +59,8 @@ async function bootstrap(): Promise<void> {
     logger.info(`[HTTP]  GET  /whatsapp/status`)
     logger.info(`[HTTP]  POST /whatsapp/send`)
     logger.info(`[HTTP]  POST /whatsapp/notify-order`)
+    logger.info(`[HTTP]  GET  /whatsapp/conversas`)
+    logger.info(`[HTTP]  GET  /whatsapp/conversas/:phone/mensagens`)
     logger.info(`[HTTP]  POST /send-whatsapp   (compat. legado)`)
     logger.info(`[HTTP] ─────────────────────────────────────────────`)
   })

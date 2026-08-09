@@ -3,7 +3,11 @@ import makeWASocket, {
   useMultiFileAuthState,
   fetchLatestBaileysVersion,
   makeCacheableSignalKeyStore,
+  isJidGroup,
+  isLidUser,
+  jidNormalizedUser,
   type WASocket,
+  type WAMessage,
   type ConnectionState as BaileysConnState,
 } from '@whiskeysockets/baileys'
 import { Boom } from '@hapi/boom'
@@ -12,7 +16,8 @@ import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
 import qrcodeTerminal from 'qrcode-terminal'
 import { logger, baileysLogger } from '../../utils/logger.js'
-import type { ConnectionState } from './types.js'
+import { fromWhatsAppJid } from '../../utils/phoneUtils.js'
+import type { ConnectionState, InboundMessage } from './types.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
@@ -55,6 +60,48 @@ export class BaileysClient extends EventEmitter {
 
     this.socket.ev.on('creds.update', saveCreds)
     this.socket.ev.on('connection.update', (u) => this.onConnectionUpdate(u))
+    this.socket.ev.on('messages.upsert', (u) => this.onMessagesUpsert(u))
+  }
+
+  // ─── Tratamento de mensagens recebidas ───────────────────────────────────
+
+  /**
+   * Processa mensagens novas e emite `message` (InboundMessage) para cada uma
+   * que passe pelos filtros: só chat 1:1 (sem grupo), só mensagem real do
+   * cliente (sem eco de fromMe), só mensagens recebidas ao vivo (`type === 'notify'`).
+   */
+  private onMessagesUpsert(update: { messages: WAMessage[]; type: string }): void {
+    if (update.type !== 'notify') return
+
+    for (const msg of update.messages) {
+      const remoteJid = msg.key.remoteJid
+      if (!remoteJid || msg.key.fromMe) continue
+      if (isJidGroup(remoteJid)) continue
+
+      if (isLidUser(remoteJid)) {
+        logger.warn(`[WPP] Mensagem recebida via JID @lid (${remoteJid}) — telefone real não resolvido, ignorando.`)
+        continue
+      }
+
+      const text =
+        msg.message?.conversation ??
+        msg.message?.extendedTextMessage?.text ??
+        ''
+      const hasMedia = Boolean(
+        msg.message?.imageMessage || msg.message?.audioMessage || msg.message?.documentMessage
+      )
+
+      if (!text && !hasMedia) continue // reação, mensagem apagada, etc.
+
+      const inbound: InboundMessage = {
+        phone: fromWhatsAppJid(jidNormalizedUser(remoteJid)),
+        text,
+        hasMedia,
+        timestamp: Number(msg.messageTimestamp ?? Date.now() / 1000) * 1000,
+      }
+
+      this.emit('message', inbound)
+    }
   }
 
   // ─── Tratamento de eventos de conexão ────────────────────────────────────

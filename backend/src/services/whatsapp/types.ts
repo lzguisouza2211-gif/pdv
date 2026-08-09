@@ -29,3 +29,14 @@ export interface WhatsAppStatus {
   phoneNumber?: string
   uptime: number | null  // segundos conectado
 }
+
+/** Mensagem de texto recebida de um cliente, já filtrada (sem grupo, sem eco de fromMe). */
+export interface InboundMessage {
+  /** Telefone normalizado, sem sufixo de JID (ex.: "5511987654321"). */
+  phone: string
+  /** Texto da mensagem. String vazia se a mensagem só continha mídia. */
+  text: string
+  /** true se a mensagem trouxe imagem/áudio/documento anexado. */
+  hasMedia: boolean
+  timestamp: number
+}

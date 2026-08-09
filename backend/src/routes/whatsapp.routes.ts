@@ -1,5 +1,6 @@
 import { Router, type Request, type Response, type NextFunction } from 'express'
 import { WhatsAppController } from '../controllers/WhatsAppController.js'
+import { ConversationController } from '../controllers/ConversationController.js'
 import { logger } from '../utils/logger.js'
 
 const router = Router()
@@ -49,5 +50,17 @@ router.post('/send', WhatsAppController.send)
  * Body: { phone, customerName, orderId, status, estimatedTime?, total? }
  */
 router.post('/notify-order', WhatsAppController.notifyOrder)
+
+/**
+ * GET /whatsapp/conversas
+ * Lista conversas do Atendente IA (Fase 0 — só para verificação manual, sem UI ainda).
+ */
+router.get('/conversas', ConversationController.list)
+
+/**
+ * GET /whatsapp/conversas/:phone/mensagens
+ * Histórico de mensagens de uma conversa.
+ */
+router.get('/conversas/:phone/mensagens', ConversationController.messages)
 
 export default router
