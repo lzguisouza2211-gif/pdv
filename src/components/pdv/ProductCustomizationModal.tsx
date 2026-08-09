@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { formatBRL } from '@/utils/calc'
 import { ChevronDown, Plus, Minus, X } from 'lucide-react'
 import { fetchAdicionaisByProduct, fetchRetiradosByProduct } from '@/services/api/cardapio.service'
+import { fetchIngredientesIndisponiveis } from '@/services/api/ingredientes.service'
 import { CATEGORIAS_COM_SABOR } from '@/config/cardapio'
 
 
@@ -79,6 +80,7 @@ export function ProductCustomizationModal({
 }: Props) {
   const [adicionais, setAdicionais] = useState<Adicional[]>([])
   const [retiradas, setRetiradas] = useState<string[]>([])
+  const [indisponiveis, setIndisponiveis] = useState<Set<string>>(new Set())
   const [addQtys, setAddQtys] = useState<Record<string, number>>({})
   const [selectedRem, setSelectedRem] = useState<Set<string>>(new Set())
   const [selectedSabor, setSelectedSabor] = useState<string | null>(null)
@@ -112,10 +114,12 @@ export function ProductCustomizationModal({
     Promise.all([
       fetchAdicionaisByProduct(item.id),
       fetchRetiradosByProduct(item.id),
+      fetchIngredientesIndisponiveis(),
     ])
-      .then(([ads, rets]) => {
+      .then(([ads, rets, indis]) => {
         setAdicionais(ads)
         setRetiradas(rets.length > 0 ? rets : item.ingredientes)
+        setIndisponiveis(new Set(indis.filter((i) => i.indisponivel).map((i) => i.ingrediente)))
       })
       .catch(() => {})
       .finally(() => setLoading(false))
@@ -254,20 +258,27 @@ export function ProductCustomizationModal({
                   {paidAdicionais.map((a) => {
                     const q = addQtys[a.nome] ?? 0
                     const selected = q > 0
+                    const indisponivel = indisponiveis.has(a.nome)
                     return allowMultipleAdicionais ? (
-                      <div key={a.id} className="flex items-center justify-between gap-3 py-3.5">
+                      <div key={a.id} className={`flex items-center justify-between gap-3 py-3.5 ${indisponivel ? 'opacity-50' : ''}`}>
                         <div className="flex-1 min-w-0">
                           <p className="text-[15px] capitalize leading-tight font-medium">{a.nome}</p>
                           <p className="text-sm text-primary font-semibold mt-0.5">
-                            {a.preco > 0 ? `+${formatBRL(a.preco)}` : 'Grátis'}
-                            {q > 1 && a.preco > 0 && <span className="text-muted-foreground font-normal"> · {formatBRL(a.preco * q)} total</span>}
+                            {indisponivel ? (
+                              <span className="text-destructive">Indisponível</span>
+                            ) : (
+                              <>
+                                {a.preco > 0 ? `+${formatBRL(a.preco)}` : 'Grátis'}
+                                {q > 1 && a.preco > 0 && <span className="text-muted-foreground font-normal"> · {formatBRL(a.preco * q)} total</span>}
+                              </>
+                            )}
                           </p>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
                           <button
                             type="button"
                             onClick={() => setQty(a.nome, q - 1)}
-                            disabled={q === 0}
+                            disabled={q === 0 || indisponivel}
                             className="h-9 w-9 rounded-full border-2 flex items-center justify-center disabled:opacity-30 hover:bg-muted transition-colors"
                           >
                             <Minus className="h-3.5 w-3.5" />
@@ -276,7 +287,7 @@ export function ProductCustomizationModal({
                           <button
                             type="button"
                             onClick={() => setQty(a.nome, q + 1)}
-                            disabled={q >= MAX_QTY}
+                            disabled={q >= MAX_QTY || indisponivel}
                             className="h-9 w-9 rounded-full border-2 border-primary flex items-center justify-center disabled:opacity-30 hover:bg-primary/10 transition-colors"
                           >
                             <Plus className="h-3.5 w-3.5 text-primary" />
@@ -284,19 +295,22 @@ export function ProductCustomizationModal({
                         </div>
                       </div>
                     ) : (
-                      <div key={a.id} className="flex items-center gap-3 py-3.5">
+                      <div key={a.id} className={`flex items-center gap-3 py-3.5 ${indisponivel ? 'opacity-50' : ''}`}>
                         <Checkbox
                           id={`add-${a.nome}`}
                           checked={selected}
+                          disabled={indisponivel}
                           onCheckedChange={() => setQty(a.nome, selected ? 0 : 1)}
                           className="h-5 w-5"
                         />
                         <Label
                           htmlFor={`add-${a.nome}`}
-                          className="flex-1 flex items-center justify-between capitalize cursor-pointer text-[15px] font-medium"
+                          className={`flex-1 flex items-center justify-between capitalize text-[15px] font-medium ${indisponivel ? 'cursor-not-allowed' : 'cursor-pointer'}`}
                         >
                           <span>{a.nome}</span>
-                          <span className="text-primary font-semibold">{a.preco > 0 ? `+${formatBRL(a.preco)}` : 'Grátis'}</span>
+                          <span className={indisponivel ? 'text-destructive font-semibold' : 'text-primary font-semibold'}>
+                            {indisponivel ? 'Indisponível' : a.preco > 0 ? `+${formatBRL(a.preco)}` : 'Grátis'}
+                          </span>
                         </Label>
                       </div>
                     )
