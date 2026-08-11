@@ -3,7 +3,7 @@
   "description": "Sistema PDV para Luizão Lanches",
   "author": "Guilherme",
   "private": true,
-  "version": "1.0.38",
+  "version": "1.0.39",
   "type": "module",
   "main": "electron-dist/main/main.js",
   "electronmon": {

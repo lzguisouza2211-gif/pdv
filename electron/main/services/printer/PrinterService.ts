@@ -40,6 +40,9 @@ async function printViaWindows(text: string, printerName: string): Promise<void>
   const dllPath = join(tmpdir(), 'PDVRawPrint.dll').replace(/\\/g, '\\\\')
 
   const psScript = `
+$sw = [System.Diagnostics.Stopwatch]::StartNew()
+function Mark($label) { Write-Host "TIMING $label : $($sw.ElapsedMilliseconds)ms" }
+Mark "script-start"
 $dll = "${dllPath}"
 $src = @'
 using System;
@@ -61,25 +64,33 @@ public class RawPrint {
 }
 '@
 if (Test-Path $dll) { Add-Type -Path $dll } else { Add-Type -TypeDefinition $src -OutputAssembly $dll }
+Mark "addtype-done"
 $h = [IntPtr]::Zero
 if (-not [RawPrint]::OpenPrinter("${pName}", [ref]$h, [IntPtr]::Zero)) {
     throw "OpenPrinter falhou - verifique o nome da impressora: '${pName}'"
 }
+Mark "openprinter-done"
 $di = New-Object RawPrint+DOCINFO
 $di.pDocName = "receipt"
 $di.pDataType = "RAW"
 $docId = [RawPrint]::StartDocPrinter($h, 1, $di)
 if ($docId -le 0) { throw "StartDocPrinter falhou" }
+Mark "startdocprinter-done"
 [RawPrint]::StartPagePrinter($h) | Out-Null
+Mark "startpageprinter-done"
 $bytes = [System.IO.File]::ReadAllBytes("${tmpBin}")
 $ptr = [System.Runtime.InteropServices.Marshal]::AllocHGlobal($bytes.Length)
 [System.Runtime.InteropServices.Marshal]::Copy($bytes, 0, $ptr, $bytes.Length)
 $w = 0
 [RawPrint]::WritePrinter($h, $ptr, $bytes.Length, [ref]$w) | Out-Null
+Mark "writeprinter-done"
 [System.Runtime.InteropServices.Marshal]::FreeHGlobal($ptr)
 [RawPrint]::EndPagePrinter($h) | Out-Null
+Mark "endpageprinter-done"
 [RawPrint]::EndDocPrinter($h) | Out-Null
+Mark "enddocprinter-done"
 [RawPrint]::ClosePrinter($h) | Out-Null
+Mark "closeprinter-done"
 Write-Host "OK: $w bytes enviados"`
 
   writeFileSync(tmpPs, psScript, 'utf8')
