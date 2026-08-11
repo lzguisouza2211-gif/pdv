@@ -4,10 +4,12 @@ import { join } from 'path'
 import { tmpdir } from 'os'
 import { createRequire } from 'module'
 import { readConfig } from './ConfigStore.js'
+import { logger } from '../../logger.js'
 
 const require = createRequire(import.meta.url)
 
 async function printViaEscpos(text: string, printerPath: string): Promise<void> {
+  const start = Date.now()
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { Printer } = require('@node-escpos/core') as any
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -20,6 +22,7 @@ async function printViaEscpos(text: string, printerPath: string): Promise<void> 
       printer.align('lt').text(text).cut().close().then(resolve).catch(reject)
     })
   })
+  logger.info('PRINT', `ESC/POS serial concluído em ${Date.now() - start}ms`, { printerPath })
 }
 
 async function printViaWindows(text: string, printerName: string): Promise<void> {
@@ -81,18 +84,22 @@ Write-Host "OK: $w bytes enviados"`
 
   writeFileSync(tmpPs, psScript, 'utf8')
 
+  const start = Date.now()
+  logger.info('PRINT', 'Enviando via PowerShell/spooler Windows', { printerName: pName })
+
   return new Promise<void>((resolve, reject) => {
     exec(`powershell -ExecutionPolicy Bypass -File "${tmpPs}"`, { timeout: 30_000 }, (err, stdout, stderr) => {
       try { unlinkSync(tmpBin) } catch {}
       try { unlinkSync(tmpPs)  } catch {}
+      const elapsed = Date.now() - start
       if (err) {
         const msg = err.killed
           ? 'Impressora não respondeu em 30 segundos (timeout)'
           : stderr || err.message
-        console.error('[PRINT] Erro PowerShell:', msg)
+        logger.error('PRINT', `Erro PowerShell após ${elapsed}ms`, msg)
         reject(new Error(msg))
       } else {
-        console.log('[PRINT]', stdout.trim())
+        logger.info('PRINT', `PowerShell concluído em ${elapsed}ms`, stdout.trim())
         resolve()
       }
     })
@@ -100,24 +107,27 @@ Write-Host "OK: $w bytes enviados"`
 }
 
 export async function doPrint(text: string): Promise<void> {
+  const start = Date.now()
   const { printerName, printerPath } = readConfig()
+  logger.info('PRINT', 'Início da impressão', { chars: text.length, printerName, printerPath })
 
   if (printerPath) {
     try {
       await printViaEscpos(text, printerPath)
-      console.log('[PRINT] Impresso via ESC/POS serial')
+      logger.info('PRINT', `Impresso via ESC/POS serial — total ${Date.now() - start}ms`)
       return
     } catch (err) {
-      console.warn('[PRINT] ESC/POS falhou, tentando Windows nativo:', (err as Error).message)
+      logger.warn('PRINT', 'ESC/POS falhou, tentando Windows nativo', (err as Error).message)
     }
   }
 
   if (process.platform === 'win32') {
     await printViaWindows(text, printerName)
-    console.log(`[PRINT] Impresso via Windows (${printerName || 'impressora padrão'})`)
+    logger.info('PRINT', `Impresso via Windows (${printerName || 'impressora padrão'}) — total ${Date.now() - start}ms`)
     return
   }
 
+  logger.info('PRINT', `Modo texto (sem impressora) — total ${Date.now() - start}ms`)
   console.log('\n========== IMPRESSÃO (modo texto) ==========')
   console.log(text)
   console.log('============================================\n')

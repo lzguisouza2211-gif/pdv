@@ -85,7 +85,7 @@ export class BaileysClient extends EventEmitter {
 
       const statusCode = (lastDisconnect?.error as Boom)?.output?.statusCode
       const reason =
-        DisconnectReason[statusCode as keyof typeof DisconnectReason] ?? 'Desconhecido'
+        DisconnectReason[statusCode as unknown as keyof typeof DisconnectReason] ?? 'Desconhecido'
 
       logger.warn(`[WPP] Conexão encerrada — motivo: ${reason} (${statusCode})`)
       this.emit('disconnected', { statusCode, reason })
