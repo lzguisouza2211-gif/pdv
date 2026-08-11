@@ -99,7 +99,7 @@ Write-Host "OK: $w bytes enviados"`
   logger.info('PRINT', 'Enviando via PowerShell/spooler Windows', { printerName: pName })
 
   return new Promise<void>((resolve, reject) => {
-    exec(`powershell -ExecutionPolicy Bypass -File "${tmpPs}"`, { timeout: 30_000 }, (err, stdout, stderr) => {
+    exec(`powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "${tmpPs}"`, { timeout: 30_000 }, (err, stdout, stderr) => {
       try { unlinkSync(tmpBin) } catch {}
       try { unlinkSync(tmpPs)  } catch {}
       const elapsed = Date.now() - start
